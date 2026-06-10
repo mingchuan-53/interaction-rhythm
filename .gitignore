@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.spec
+
+# Virtual environment
+.venv/
+venv/
+
+# Runtime data (user-specific)
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Build artifacts
+app.ico
+*.log
+startup-error.log
+source-test.*
+.build-data-backup/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+desktop.ini
