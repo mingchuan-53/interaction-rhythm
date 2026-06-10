@@ -76,7 +76,7 @@ interaction-rhythm/
 | --- | --- |
 | `dist/build/InteractionRhythm` | PyInstaller 临时输出，下一次打包会覆盖。 |
 | `dist/current/InteractionRhythm` | 本机当前运行版，桌面 `交互节律.lnk` 指向这里。 |
-| `dist/releases/InteractionRhythm-v1.1` | 带本机数据的版本快照，用于回退和核对。 |
+| `dist/releases/InteractionRhythm-v1.2` | 带本机数据的版本快照，用于回退和核对。 |
 | `dist/releases/交互节律.zip` | 发给朋友测试的分享包，不包含本机数据库。 |
 | `dist/releases/update.json` | 更新清单，发布时和 `交互节律.zip` 一起上传到稳定地址。 |
 | `dist/archive/` | 旧包、旧 zip、旧快捷方式。 |

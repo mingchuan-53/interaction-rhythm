@@ -3,7 +3,7 @@ import os
 
 APP_NAME = "交互节律"
 APP_ICON_TEXT = "节"
-APP_VERSION = "1.1"
+APP_VERSION = "1.2"
 
 PORT = 18923
 POLL_INTERVAL = 0.5

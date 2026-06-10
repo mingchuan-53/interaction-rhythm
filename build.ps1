@@ -180,8 +180,8 @@ $manifest = [ordered]@{
   size = $shareZipSize
   published_at = $publishedAt
   notes = @(
-    "支持应用内检查更新、后台下载、关闭自身、替换安装并自动重启。",
-    "更新时保留本机数据库、应用图标缓存和更新日志。"
+    "首页热力图调整为今天加前五天，保留居中留白，减少拥挤感。",
+    "应用排行四周留白更舒适，窗口尺寸调整为 520×585。"
   )
 }
 $manifestPath = Join-Path $ReleaseRoot "update.json"
