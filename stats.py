@@ -94,6 +94,8 @@ class Handler(SimpleHTTPRequestHandler):
             })
         elif path == "/api/update/check":
             self._handle_update_check()
+        elif path == "/api/update/status":
+            self._handle_update_status()
         elif path == "/api/settings":
             self._handle_settings()
         else:
@@ -129,6 +131,13 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             from update_manager import check_update
             self._json(check_update())
+        except Exception as e:
+            self._json({"ok": False, "error": str(e)})
+
+    def _handle_update_status(self):
+        try:
+            from update_manager import update_status
+            self._json(update_status())
         except Exception as e:
             self._json({"ok": False, "error": str(e)})
 

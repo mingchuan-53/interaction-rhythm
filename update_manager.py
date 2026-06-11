@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.request
@@ -29,6 +30,11 @@ class UpdatePackage:
     staging_dir: Path
 
 
+_CACHE_MAX_AGE_SECONDS = 60 * 60
+_CHECK_LOCK = threading.Lock()
+_CHECKING = False
+
+
 def app_root() -> Path:
     return Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).parent
 
@@ -43,6 +49,31 @@ def updates_dir() -> Path:
     p = data_dir() / "updates"
     p.mkdir(parents=True, exist_ok=True)
     return p
+
+
+def _cache_path() -> Path:
+    return updates_dir() / "update-cache.json"
+
+
+def _read_update_cache() -> dict[str, Any] | None:
+    path = _cache_path()
+    try:
+        if path.is_file():
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else None
+    except Exception:
+        return None
+    return None
+
+
+def _write_update_cache(raw: dict[str, Any]) -> None:
+    try:
+        _cache_path().write_text(
+            json.dumps({"checked_at": time.time(), "raw": raw}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except Exception:
+        pass
 
 
 def _version_tuple(value: str) -> tuple[int, ...]:
@@ -125,9 +156,78 @@ def _normalize_manifest(raw: dict[str, Any]) -> dict[str, Any]:
 def check_update() -> dict[str, Any]:
     url = _manifest_url()
     if not url:
-        return {"ok": True, "manifest": _unconfigured_manifest()}
-    manifest = _normalize_manifest(_http_json(url))
-    return {"ok": True, "manifest": manifest}
+        return {"ok": True, "manifest": _unconfigured_manifest(), "cached": False, "checking": False}
+    raw = _http_json(url)
+    manifest = _normalize_manifest(raw)
+    _write_update_cache(raw)
+    return {"ok": True, "manifest": manifest, "cached": False, "checking": False, "checked_at": time.time()}
+
+
+def _manifest_from_cache(cache: dict[str, Any] | None) -> tuple[dict[str, Any] | None, float]:
+    if not cache:
+        return None, 0
+    raw = cache.get("raw")
+    if not isinstance(raw, dict):
+        raw = cache.get("manifest")
+    if not isinstance(raw, dict):
+        return None, 0
+    try:
+        checked_at = float(cache.get("checked_at") or 0)
+        return _normalize_manifest(raw), checked_at
+    except Exception:
+        return None, 0
+
+
+def _background_check_update() -> None:
+    global _CHECKING
+    try:
+        check_update()
+    except Exception:
+        pass
+    finally:
+        with _CHECK_LOCK:
+            _CHECKING = False
+
+
+def start_update_check_async() -> bool:
+    global _CHECKING
+    if not _manifest_url():
+        return False
+    with _CHECK_LOCK:
+        if _CHECKING:
+            return True
+        _CHECKING = True
+    threading.Thread(target=_background_check_update, name="UpdateCheck", daemon=True).start()
+    return True
+
+
+def update_status(max_age_seconds: int = _CACHE_MAX_AGE_SECONDS) -> dict[str, Any]:
+    if not _manifest_url():
+        return {"ok": True, "manifest": _unconfigured_manifest(), "cached": False, "checking": False}
+
+    manifest, checked_at = _manifest_from_cache(_read_update_cache())
+    fresh = bool(manifest and checked_at and (time.time() - checked_at) < max_age_seconds)
+    if fresh:
+        return {"ok": True, "manifest": manifest, "cached": True, "checking": False, "checked_at": checked_at}
+
+    checking = start_update_check_async()
+    if manifest:
+        return {"ok": True, "manifest": manifest, "cached": True, "checking": checking, "checked_at": checked_at}
+
+    pending = {
+        "app": config.APP_NAME,
+        "channel": config.UPDATE_CHANNEL,
+        "latest": config.APP_VERSION,
+        "current": config.APP_VERSION,
+        "has_update": False,
+        "download_url": "",
+        "sha256": "",
+        "size": 0,
+        "notes": ["正在后台检查更新。"],
+        "published_at": "",
+        "update_configured": True,
+    }
+    return {"ok": True, "manifest": pending, "cached": False, "checking": checking, "checked_at": 0}
 
 
 def _sha256(path: Path) -> str:
@@ -199,7 +299,7 @@ def _write_updater(package: UpdatePackage) -> Path:
     if not new_exe:
         raise UpdateError("更新包里没有找到 InteractionRhythm.exe")
     source_root = new_exe.parent
-    backup = updates_dir() / f"backup-{config.APP_VERSION}-{int(time.time())}"
+    backup = Path(tempfile.gettempdir()) / f"InteractionRhythm-backup-{config.APP_VERSION}-{int(time.time())}"
 
     script = f"""$ErrorActionPreference = "Stop"
 $Target = {json.dumps(str(root), ensure_ascii=False)}
@@ -220,6 +320,12 @@ try {{
 
   if (Test-Path $Backup) {{ Remove-Item -LiteralPath $Backup -Recurse -Force }}
   New-Item -Path $Backup -ItemType Directory -Force | Out-Null
+  $Data = Join-Path $Target "data"
+  $DataBackup = Join-Path $Backup "data-preserved"
+  if (Test-Path $Data) {{
+    Copy-Item -LiteralPath $Data -Destination $DataBackup -Recurse -Force
+    Log "user data preserved"
+  }}
   Get-ChildItem -LiteralPath $Target -Force | Where-Object {{ $_.Name -ne "data" }} | ForEach-Object {{
     Move-Item -LiteralPath $_.FullName -Destination $Backup -Force
   }}
@@ -227,23 +333,44 @@ try {{
   Get-ChildItem -LiteralPath $Source -Force | Where-Object {{ $_.Name -ne "data" }} | ForEach-Object {{
     Copy-Item -LiteralPath $_.FullName -Destination $Target -Recurse -Force
   }}
-  if (Test-Path (Join-Path $Source "data")) {{
-    New-Item -Path (Join-Path $Target "data") -ItemType Directory -Force | Out-Null
-    Get-ChildItem -LiteralPath (Join-Path $Source "data") -Force | Where-Object {{
-      $_.Name -notin @("tracker.db","tracker.db-wal","tracker.db-shm","icons","updates")
-    }} | ForEach-Object {{
-      Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $Target "data") -Recurse -Force
+  if (-not (Test-Path $Data)) {{ New-Item -Path $Data -ItemType Directory -Force | Out-Null }}
+  if (Test-Path $DataBackup) {{
+    Get-ChildItem -LiteralPath $DataBackup -Force | ForEach-Object {{
+      Copy-Item -LiteralPath $_.FullName -Destination $Data -Recurse -Force
+    }}
+  }}
+  $SourceData = Join-Path $Source "data"
+  if (Test-Path $SourceData) {{
+    foreach ($name in @("update-url.txt","交互节律.ico","interaction-rhythm-title.png")) {{
+      $sourceItem = Join-Path $SourceData $name
+      if (Test-Path $sourceItem) {{
+        Copy-Item -LiteralPath $sourceItem -Destination $Data -Recurse -Force
+      }}
+    }}
+  }}
+  foreach ($name in @("tracker.db","tracker.db-wal","tracker.db-shm","settings.json")) {{
+    $backupItem = Join-Path $DataBackup $name
+    $targetItem = Join-Path $Data $name
+    if ((Test-Path $backupItem) -and -not (Test-Path $targetItem)) {{
+      Copy-Item -LiteralPath $backupItem -Destination $Data -Force
     }}
   }}
 
   Start-Process -FilePath $Exe -WorkingDirectory $Target
   Log "update finished"
+  try {{ Remove-Item -LiteralPath $Backup -Recurse -Force }} catch {{}}
 }} catch {{
   Log ("update failed: " + $_.Exception.Message)
   try {{
     if (Test-Path $Backup) {{
-      Get-ChildItem -LiteralPath $Backup -Force | ForEach-Object {{
+      Get-ChildItem -LiteralPath $Backup -Force | Where-Object {{ $_.Name -ne "data-preserved" }} | ForEach-Object {{
         Copy-Item -LiteralPath $_.FullName -Destination $Target -Recurse -Force
+      }}
+      if (Test-Path (Join-Path $Backup "data-preserved")) {{
+        New-Item -Path (Join-Path $Target "data") -ItemType Directory -Force | Out-Null
+        Get-ChildItem -LiteralPath (Join-Path $Backup "data-preserved") -Force | ForEach-Object {{
+          Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $Target "data") -Recurse -Force
+        }}
       }}
       Start-Process -FilePath $Exe -WorkingDirectory $Target
     }}

@@ -649,7 +649,7 @@ class DB:
             )
         return lines
 
-    def _fresh_suggestions(self, base: list[str], limit: int = 4) -> list[str]:
+    def _fresh_suggestions(self, base: list[str], limit: int = 3) -> list[str]:
         pool = list(dict.fromkeys(base))
         random.shuffle(pool)
         return pool[:limit]
@@ -692,6 +692,8 @@ class DB:
             ordered_names.append(app)
 
         for name in ordered_names:
+            if self._app_display_name(name) == "交互节律":
+                continue
             duration = next((int(app.get("seconds") or 0) for app in apps if app.get("app") == name), 0)
             row = interactions.get(name, {})
             keyboard = int(row.get("keyboard") or 0)
@@ -715,7 +717,7 @@ class DB:
             })
 
         candidates = []
-        advice = []
+        advice_candidates = []
         for item in rows:
             name = item["name"]
             seconds = item["seconds"]
@@ -732,37 +734,61 @@ class DB:
                     90 + int((response_share - duration_share) * 100),
                     f"{name} 的交互占比高于时长占比，更像今天需要主动操作的应用。",
                 ))
-                advice.append(f"把 {name} 相关任务集中到同一段时间处理，减少来回切换。")
+                advice_candidates.append((
+                    90 + int((response_share - duration_share) * 100),
+                    "active_task",
+                    "把高交互应用集中到同一段时间处理，减少来回切换。",
+                ))
             if seconds >= 20 * 60 and duration_share - response_share >= 0.15:
                 candidates.append((
                     82 + int((duration_share - response_share) * 100),
                     f"{name} 停留较长，但键鼠响应不高，更像阅读、观看、等待或资料浏览。",
                 ))
-                advice.append(f"如果 {name} 是阅读或观看场景，可以给自己设一个明确的收尾点。")
+                advice_candidates.append((
+                    82 + int((duration_share - response_share) * 100),
+                    "low_response_stay",
+                    "阅读、观看或资料浏览结束前，给自己设一个明确的收尾点。",
+                ))
             if sessions_count >= 6 and seconds < 90 * 60:
                 candidates.append((
                     78 + sessions_count,
                     f"{name} 回返次数偏多，可能经常插入到其它任务之间。",
                 ))
-                advice.append(f"把 {name} 的查看频率收成几次固定检查，专注时间会更完整。")
+                advice_candidates.append((
+                    78 + sessions_count,
+                    "return_frequency",
+                    "把最容易反复切回的应用收成几次固定检查，专注时间会更完整。",
+                ))
             if keyboard >= max(300, mouse * 1.6):
                 candidates.append((
                     75 + min(20, keyboard // 300),
                     f"{name} 的键盘响应更突出，更像输入、搜索、整理或开发现场。",
                 ))
-                advice.append("键盘响应连续变高时，手指和前臂需要短暂停顿。")
+                advice_candidates.append((
+                    75 + min(20, keyboard // 300),
+                    "keyboard_break",
+                    "键盘响应连续变高时，手指和前臂需要短暂停顿。",
+                ))
             if mouse >= max(300, keyboard * 1.6):
                 candidates.append((
                     75 + min(20, mouse // 300),
                     f"{name} 的鼠标响应更突出，更像浏览、筛选、调整或文件整理。",
                 ))
-                advice.append("鼠标响应连续变高时，检查手腕位置，能用快捷键就少拖动。")
+                advice_candidates.append((
+                    75 + min(20, mouse // 300),
+                    "mouse_break",
+                    "鼠标响应连续变高时，检查手腕位置，能用快捷键就少拖动。",
+                ))
             if responses >= 600 and density >= 80:
                 candidates.append((
                     72 + min(20, int(density // 20)),
                     f"{name} 单位时间响应密度偏高，说明这段使用不只是挂着，而是在密集操作。",
                 ))
-                advice.append(f"{name} 高密度使用后，下一段最好安排低刺激任务或短休息。")
+                advice_candidates.append((
+                    72 + min(20, int(density // 20)),
+                    "high_density",
+                    "高密度使用后，下一段最好安排低刺激任务或短休息。",
+                ))
 
         if rows and not candidates:
             lead = max(rows, key=lambda item: (item["responses"], item["seconds"]))
@@ -780,6 +806,15 @@ class DB:
                 break
 
         rows.sort(key=lambda item: (item["responses"], item["seconds"]), reverse=True)
+        advice = []
+        seen_categories = set()
+        for _score, category, text in sorted(advice_candidates, key=lambda item: item[0], reverse=True):
+            if category in seen_categories or text in advice:
+                continue
+            seen_categories.add(category)
+            advice.append(text)
+            if len(advice) >= 3:
+                break
         return findings, advice, rows[:6]
 
     def insights(self, days: int = 7) -> dict:
@@ -900,7 +935,7 @@ class DB:
                 suggestion_pool.append("如果晚上还在高强度输入，睡前 30 分钟尽量收尾。")
             if mouse > keyboard * 1.5 and mouse > 1000:
                 suggestion_pool.append("鼠标用得多时，把最常用的动作换成快捷键，少让手腕来回移动。")
-            suggestions = self._fresh_suggestions(app_suggestions + suggestion_pool, 4)
+            suggestions = self._fresh_suggestions(app_suggestions + suggestion_pool, 3)
 
         comparison = self._comparison_text(previous, responses, avg_seconds, top_app, peak_hour)
         if previous and comparison and responses >= 500 and total_seconds >= 20 * 60:
@@ -938,7 +973,7 @@ class DB:
             "findings": findings[:3],
             "judgments": findings[:3],
             "comparison": comparison,
-            "suggestions": suggestions[:4],
+            "suggestions": suggestions[:3],
             "app_strength": app_strength,
             "charts": {
                 "daily": daily,

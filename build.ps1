@@ -214,9 +214,9 @@ $manifest = [ordered]@{
   size = $shareZipSize
   published_at = $publishedAt
   notes = @(
-    "启动后会轻量检查更新，有新版时给出提醒，不会自动安装。",
-    "新增安装器脚本，可生成开始菜单、桌面快捷方式和卸载入口。",
-    "默认更新通道改为 GitHub Release，减少手工配置遗漏。"
+    "检查更新改为先读本地状态，后台静默确认，设置页不再等待网络。",
+    "更新安装会保留并备份本地记录，减少升级后显示重新计数的问题。",
+    "节律助手建议收敛为三条，并补充轻量弹窗动画。"
   )
 }
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $ManifestPath -Encoding UTF8

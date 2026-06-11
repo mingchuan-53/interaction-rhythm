@@ -231,6 +231,10 @@ def main():
                 server.stop()
         except Exception:
             pass
+        try:
+            db.checkpoint()
+        except Exception:
+            pass
         os._exit(0)
 
     try:
