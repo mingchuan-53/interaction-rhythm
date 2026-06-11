@@ -13,6 +13,7 @@ DEFAULT_SETTINGS = {
     "auto_start": False,
     "background_start": False,
     "silent_start": False,
+    "auto_update_check": True,
 }
 
 

@@ -155,6 +155,20 @@
     .app-pct{width:24px;font-size:10.5px;color:var(--text4);text-align:right;font-variant-numeric:tabular-nums;flex-shrink:0}
     .app-time{width:36px;font-size:11.5px;color:var(--text3);text-align:right;font-variant-numeric:tabular-nums;flex-shrink:0}
     .empty{text-align:center;color:var(--text4);font-size:12px;padding:32px 0}
+    .update-toast{
+      position:fixed;right:14px;bottom:14px;z-index:24;width:min(320px,calc(100vw - 28px));
+      background:var(--surface);border:1px solid var(--border-hover);border-radius:12px;
+      box-shadow:0 14px 36px rgba(0,0,0,.22);padding:10px 10px 10px 12px;
+      display:flex;align-items:center;gap:10px;color:var(--text)
+    }
+    .update-toast[hidden]{display:none}
+    .update-copy{min-width:0;flex:1}
+    .update-copy b{display:block;font-size:13.5px;font-weight:750;line-height:1.25}
+    .update-copy span{display:block;font-size:11.5px;color:var(--text4);line-height:1.35;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .update-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+    .update-mini-btn{height:28px;border-radius:7px;border:1px solid var(--border);background:var(--surface-hover);color:var(--text2);font-size:12px;font-weight:650;padding:0 9px;cursor:pointer}
+    .update-mini-btn.primary{background:var(--primary-dim);border-color:rgba(22,163,74,.25);color:var(--primary)}
+    .update-mini-btn:hover{border-color:var(--border-hover);color:var(--text)}
 
     /* ── Modal ─────────────────── */
     .modal{
@@ -378,6 +392,17 @@
     </div>
   </div>
 
+  <div class="update-toast" id="update-toast" hidden>
+    <div class="update-copy">
+      <b id="update-toast-title">发现新版本</b>
+      <span id="update-toast-sub">可以稍后安装</span>
+    </div>
+    <div class="update-actions">
+      <button class="update-mini-btn primary" onclick="openPendingUpdate()">查看</button>
+      <button class="update-mini-btn" onclick="dismissUpdateToast()">稍后</button>
+    </div>
+  </div>
+
   <div class="modal" id="modal" hidden>
     <div class="modal-card" id="modal-card">
       <div class="modal-head">
@@ -555,13 +580,13 @@ function openExport(){
     '</div>'
   );
 }
-var SETTINGS_STATE={auto_start:false,background_start:false,silent_start:false};
+var SETTINGS_STATE={auto_start:false,background_start:false,silent_start:false,auto_update_check:true};
 function settingsToggle(key){
   var on=!!SETTINGS_STATE[key];
   return '<button class="switch '+(on?'on':'')+'" onclick="toggleSetting(&quot;'+key+'&quot;)" aria-label="'+(on?'关闭':'开启')+'"></button>';
 }
 function renderSettings(settings){
-  SETTINGS_STATE=Object.assign({auto_start:false,background_start:false,silent_start:false},settings||{});
+  SETTINGS_STATE=Object.assign({auto_start:false,background_start:false,silent_start:false,auto_update_check:true},settings||{});
   SETTINGS_STATE.silent_start=!!(SETTINGS_STATE.silent_start||SETTINGS_STATE.background_start);
   showModal('设置',
     '<div class="settings-panel">'+
@@ -572,6 +597,7 @@ function renderSettings(settings){
       '</div>'+
       '<div class="settings-section">'+
         '<h3>数据与版本</h3>'+
+        '<div class="setting-row"><div class="setting-copy"><b>自动检查更新</b><span>启动后轻量检查，有新版时提醒。</span></div>'+settingsToggle('auto_update_check')+'</div>'+
         '<div class="settings-actions">'+
           '<button class="settings-action" onclick="openExport()"><b>导出数据</b><span>最近 30 天记录。</span></button>'+
           '<button class="settings-action" onclick="openUpdate()"><b>检查更新</b><span>发现新版后安装。</span></button>'+
@@ -618,11 +644,49 @@ async function toggleSetting(key){
   }
 }
 var lastUpdateManifest=null;
+var startupUpdateChecked=false;
 function renderUpdateNotes(notes){
   if(!notes||!notes.length)return '<p class="muted">这次更新没有额外说明。</p>';
   return '<div class="insight-list">'+notes.map(function(x){
     return '<div class="insight-item">'+esc(x)+'</div>';
   }).join('')+'</div>';
+}
+function showUpdateToast(m){
+  lastUpdateManifest=m;
+  var title=document.getElementById('update-toast-title');
+  var sub=document.getElementById('update-toast-sub');
+  if(title)title.textContent='发现新版本 '+(m.latest||'');
+  if(sub)sub.textContent=(m.notes&&m.notes[0])?m.notes[0]:'可以稍后安装';
+  document.getElementById('update-toast').hidden=false;
+}
+function dismissUpdateToast(){
+  document.getElementById('update-toast').hidden=true;
+}
+function showUpdateAvailable(m,returnTo){
+  lastUpdateManifest=m;
+  var size=m.size?(' · '+(m.size/1024/1024).toFixed(1)+' MB'):'';
+  showModal('发现新版本',
+    '<div class="metric-grid">'+
+      '<div class="metric"><span>当前版本</span><b>'+esc(m.current||'—')+'</b></div>'+
+      '<div class="metric"><span>新版本</span><b>'+esc(m.latest||'—')+'</b></div>'+
+    '</div>'+
+    '<p class="muted">新版已准备好。安装时应用会短暂关闭，完成后自动重新打开。'+esc(size)+'</p>'+
+    '<div class="detail-section"><h3>更新内容</h3>'+renderUpdateNotes(m.notes||[])+'</div>'+
+    '<div class="action-grid">'+
+      '<a class="action-card" href="#" onclick="installUpdate();return false"><b>下载并安装</b><span>安装过程中应用会短暂关闭。</span></a>'+
+      '<a class="action-card" href="#" onclick="closeModal();return false"><b>稍后再说</b><span>保留当前版本继续使用。</span></a>'+
+    '</div>',
+    'update-modal',
+    {returnTo:returnTo}
+  );
+}
+function openPendingUpdate(){
+  dismissUpdateToast();
+  if(lastUpdateManifest&&lastUpdateManifest.has_update){
+    showUpdateAvailable(lastUpdateManifest,null);
+  }else{
+    openUpdate();
+  }
 }
 async function openUpdate(){
   showModal('检查更新','<div class="modal-loading">正在检查新版本…</div>','update-modal',{returnTo:'settings'});
@@ -646,23 +710,23 @@ async function openUpdate(){
       );
       return;
     }
-    var size=m.size?(' · '+(m.size/1024/1024).toFixed(1)+' MB'):'';
-    showModal('发现新版本',
-      '<div class="metric-grid">'+
-        '<div class="metric"><span>当前版本</span><b>'+esc(m.current||'—')+'</b></div>'+
-        '<div class="metric"><span>新版本</span><b>'+esc(m.latest||'—')+'</b></div>'+
-      '</div>'+
-      '<p class="muted">新版已准备好。安装时应用会短暂关闭，完成后自动重新打开。'+esc(size)+'</p>'+
-      '<div class="detail-section"><h3>更新内容</h3>'+renderUpdateNotes(m.notes||[])+'</div>'+
-      '<div class="action-grid">'+
-        '<a class="action-card" href="#" onclick="installUpdate();return false"><b>下载并安装</b><span>安装过程中应用会短暂关闭。</span></a>'+
-        '<a class="action-card" href="#" onclick="closeModal();return false"><b>稍后再说</b><span>保留当前版本继续使用。</span></a>'+
-      '</div>',
-      'update-modal'
-    );
+    showUpdateAvailable(m,'settings');
   }catch(e){
     showModal('检查更新','<div class="modal-error">'+esc(e.message||'更新检查失败')+'</div>','update-modal');
   }
+}
+async function checkUpdateSilently(){
+  if(startupUpdateChecked)return;
+  startupUpdateChecked=true;
+  try{
+    var settingsResp=await fetch('/api/settings');
+    var settingsData=await settingsResp.json();
+    if(settingsData.ok&&settingsData.settings&&settingsData.settings.auto_update_check===false)return;
+    var r=await fetch('/api/update/check');
+    var d=await r.json();
+    var m=d.manifest||{};
+    if(d.ok&&m.has_update)showUpdateToast(m);
+  }catch(e){}
 }
 async function installUpdate(){
   if(!lastUpdateManifest)return;
@@ -916,7 +980,8 @@ async function loadData() {
 async function init(){
   try{
     await loadData();
-    
+    setTimeout(checkUpdateSilently, 2500);
+
     // 定时刷新（降低频率以节省电量）
     setInterval(async function(){
       if(document.hidden)return;

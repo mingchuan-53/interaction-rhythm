@@ -21,7 +21,7 @@
 | 节律助手 | 本地规则分析，先给结论，再挑少量重点发现和建议。 |
 | 托盘后台 | 关闭窗口默认隐藏到托盘，可从托盘打开、刷新或退出后台。 |
 | 数据导出 | 支持 JSON 和 CSV，方便后续归档或自行分析。 |
-| 检查更新 | 可读取发布清单，下载新版压缩包并启动安装替换流程。 |
+| 检查更新 | 启动后可轻量检查更新，有新版时提醒，安装必须由用户确认。 |
 
 ## 隐私边界
 
@@ -90,7 +90,18 @@ python main.py
 
 - `dist/current/`：当前可运行版本
 - `dist/releases/交互节律.zip`：可分发压缩包
+- `dist/releases/interaction-rhythm.zip`：GitHub Release 使用的稳定英文包名
 - `dist/releases/update.json`：更新清单
+
+如果需要生成 Windows 安装器，先安装 Inno Setup 6，然后运行：
+
+```powershell
+.\build-installer.ps1
+```
+
+安装器输出在：
+
+- `installer/output/interaction-rhythm-setup-v版本号.exe`
 
 `dist/`、`data/`、数据库文件和调试截图不会进入 Git 仓库。
 
@@ -107,7 +118,9 @@ python main.py
 ├─ update_manager.py    # 更新检查和安装流程
 ├─ settings.py          # 用户设置
 ├─ static/index.html    # 主界面
-└─ build.ps1            # Windows 打包脚本
+├─ build.ps1            # Windows 便携包打包脚本
+├─ build-installer.ps1  # Windows 安装器构建脚本
+└─ installer/           # Inno Setup 安装器脚本
 ```
 
 ## 版本日志

@@ -28,7 +28,32 @@ $BackupDataDir = Join-Path $PSScriptRoot ".build-data-backup"
 $ManifestPath = Join-Path $ReleaseRoot "update.json"
 $ManifestUrl = $env:INTERACTION_RHYTHM_UPDATE_URL
 if ([string]::IsNullOrWhiteSpace($ManifestUrl)) {
-  $ManifestUrl = (New-Object System.Uri($ManifestPath)).AbsoluteUri
+  $ManifestUrl = "https://github.com/mingchuan-53/interaction-rhythm/releases/latest/download/update.json"
+}
+
+function Stop-ExistingApp {
+  $names = @($AppExeName, $LegacyExeName, "TypeTracker")
+  $processes = Get-Process -Name $names -ErrorAction SilentlyContinue
+  if ($processes) {
+    Write-Host "  正在停止运行中的旧版本..." -ForegroundColor DarkYellow
+    $processes | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 700
+  }
+}
+
+function Remove-TreeWithRetry([string]$Path) {
+  if (-not (Test-Path $Path)) { return }
+  $lastError = $null
+  for ($i = 0; $i -lt 8; $i++) {
+    try {
+      Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
+      return
+    } catch {
+      $lastError = $_
+      Start-Sleep -Milliseconds (300 + $i * 200)
+    }
+  }
+  throw $lastError
 }
 
 Write-Host "========================================" -ForegroundColor Cyan
@@ -142,24 +167,25 @@ $vbs = @(
 
 # [5/6] 发布到 current 和 releases
 Write-Host "[5/6] 发布 current 和 releases..." -ForegroundColor Yellow
-if (Test-Path $CurrentDir) { Remove-Item -Recurse -Force $CurrentDir }
+Stop-ExistingApp
+Remove-TreeWithRetry $CurrentDir
 Copy-Item -Path $BuildDir -Destination $CurrentDir -Recurse -Force
 
 $releaseName = "$AppExeName-v$Version"
 $releaseDir = Join-Path $ReleaseRoot $releaseName
-if (Test-Path $releaseDir) { Remove-Item -Recurse -Force $releaseDir }
+Remove-TreeWithRetry $releaseDir
 Copy-Item -Path $BuildDir -Destination $releaseDir -Recurse -Force
 
 $legacyCleanDir = Join-Path $ReleaseRoot "$releaseName-clean"
 $legacyCleanZip = Join-Path $ReleaseRoot "$releaseName-clean.zip"
 foreach ($legacySharePath in @($legacyCleanDir, $legacyCleanZip)) {
-  if (Test-Path $legacySharePath) { Remove-Item -Recurse -Force $legacySharePath }
+  Remove-TreeWithRetry $legacySharePath
 }
 
 $shareDir = Join-Path $ReleaseRoot $AppDisplayName
-if (Test-Path $shareDir) { Remove-Item -Recurse -Force $shareDir }
+Remove-TreeWithRetry $shareDir
 Copy-Item -Path $BuildDir -Destination $shareDir -Recurse -Force
-if (Test-Path "$shareDir\data") { Remove-Item -Recurse -Force "$shareDir\data" }
+Remove-TreeWithRetry "$shareDir\data"
 New-Item -Path "$shareDir\data\icons" -ItemType Directory -Force | Out-Null
 
 $shareZip = Join-Path $ReleaseRoot "$AppDisplayName.zip"
@@ -168,10 +194,13 @@ Compress-Archive -Path "$shareDir\*" -DestinationPath $shareZip -CompressionLeve
 
 $shareZipHash = (Get-FileHash -LiteralPath $shareZip -Algorithm SHA256).Hash.ToLowerInvariant()
 $shareZipSize = (Get-Item -LiteralPath $shareZip).Length
-if (Test-Path $shareDir) { Remove-Item -Recurse -Force $shareDir }
+$githubZip = Join-Path $ReleaseRoot "interaction-rhythm.zip"
+if (Test-Path $githubZip) { Remove-Item -Force $githubZip }
+Copy-Item -LiteralPath $shareZip -Destination $githubZip -Force
+Remove-TreeWithRetry $shareDir
 $downloadUrl = $env:INTERACTION_RHYTHM_DOWNLOAD_URL
 if ([string]::IsNullOrWhiteSpace($downloadUrl)) {
-  $downloadUrl = (New-Object System.Uri($shareZip)).AbsoluteUri
+  $downloadUrl = "https://github.com/mingchuan-53/interaction-rhythm/releases/download/v$Version/interaction-rhythm.zip"
 }
 $updateChannel = $env:INTERACTION_RHYTHM_UPDATE_CHANNEL
 if ([string]::IsNullOrWhiteSpace($updateChannel)) { $updateChannel = "stable" }
@@ -185,9 +214,9 @@ $manifest = [ordered]@{
   size = $shareZipSize
   published_at = $publishedAt
   notes = @(
-    "新增单应用键盘、鼠标响应归属，用于识别应用强度、回返和停留关系。",
-    "节律助手改为结论、重点发现和建议，只保留最值得看的内容。",
-    "补齐开源文档、版本日志和桌面端发布说明。"
+    "启动后会轻量检查更新，有新版时给出提醒，不会自动安装。",
+    "新增安装器脚本，可生成开始菜单、桌面快捷方式和卸载入口。",
+    "默认更新通道改为 GitHub Release，减少手工配置遗漏。"
   )
 }
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $ManifestPath -Encoding UTF8
@@ -226,6 +255,7 @@ Write-Host "  打包完成！" -ForegroundColor Green
 Write-Host "  当前使用版: dist\current\$AppExeName\$AppExeName.exe" -ForegroundColor Green
 Write-Host "  历史发布版: dist\releases\$releaseName\" -ForegroundColor Green
 Write-Host "  朋友测试包: dist\releases\$AppDisplayName.zip" -ForegroundColor Green
+Write-Host "  GitHub 发布包: dist\releases\interaction-rhythm.zip" -ForegroundColor Green
 Write-Host "  更新清单: dist\releases\update.json" -ForegroundColor Green
 Write-Host "  桌面快捷方式: $desktopPath\$AppDisplayName.lnk" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green

@@ -24,6 +24,8 @@ startup-error.log
 source-test.*
 .build-data-backup/
 debug-*.png
+installer/output/
+installer/temp/
 
 # IDE
 .vscode/

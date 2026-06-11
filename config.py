@@ -3,7 +3,7 @@ import os
 
 APP_NAME = "交互节律"
 APP_ICON_TEXT = "节"
-APP_VERSION = "1.5"
+APP_VERSION = "1.6"
 APP_MUTEX_NAME = os.getenv("INTERACTION_RHYTHM_MUTEX_NAME", r"Local\Mingchuan.InteractionRhythm.SingleInstance")
 
 PORT = 18923
@@ -18,8 +18,10 @@ HOURLY_RETENTION_DAYS = 180
 BORDERLESS_WINDOW = True
 BORDERLESS_DRAG_SELECTOR = ".window-drag"
 
-# 远程更新清单地址。发布时把 dist/releases/update.json 上传到稳定地址，
-# 再把这里或环境变量 INTERACTION_RHYTHM_UPDATE_URL 指向它。
-UPDATE_MANIFEST_URL = os.getenv("INTERACTION_RHYTHM_UPDATE_URL", "")
+# 远程更新清单地址。打包版也会写入 update-url.txt；这里作为源码运行和兜底地址。
+UPDATE_MANIFEST_URL = os.getenv(
+    "INTERACTION_RHYTHM_UPDATE_URL",
+    "https://github.com/mingchuan-53/interaction-rhythm/releases/latest/download/update.json",
+)
 UPDATE_CHANNEL = os.getenv("INTERACTION_RHYTHM_UPDATE_CHANNEL", "stable")
 UPDATE_TIMEOUT = 20
