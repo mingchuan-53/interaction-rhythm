@@ -2,6 +2,7 @@
 import config
 import ctypes
 import ctypes.wintypes
+import time
 
 user32 = ctypes.windll.user32
 _SetWindowPos = ctypes.WINFUNCTYPE(
@@ -22,6 +23,8 @@ user32.SetForegroundWindow.argtypes = [ctypes.c_void_p]
 user32.SetForegroundWindow.restype = ctypes.c_bool
 user32.GetSystemMetrics.argtypes = [ctypes.c_int]
 user32.GetSystemMetrics.restype = ctypes.c_int
+user32.GetAsyncKeyState.argtypes = [ctypes.c_int]
+user32.GetAsyncKeyState.restype = ctypes.c_short
 user32.SystemParametersInfoW.argtypes = [ctypes.c_uint, ctypes.c_uint, ctypes.c_void_p, ctypes.c_uint]
 user32.SystemParametersInfoW.restype = ctypes.c_bool
 user32.SendMessageW.argtypes = [
@@ -47,6 +50,7 @@ WM_SETICON = 0x0080
 ICON_SMALL = 0
 ICON_BIG = 1
 HTCAPTION = 2
+VK_LBUTTON = 0x01
 GW_OWNER = 4
 GWL_STYLE = -16
 GWL_EXSTYLE = -20
@@ -102,7 +106,6 @@ def _is_offscreen_or_tiny(hwnd) -> bool:
 
 
 def _restore_main_window(hwnd, force_center: bool = False):
-    user32.ShowWindow(hwnd, SW_RESTORE)
     if force_center or _is_offscreen_or_tiny(hwnd):
         x, y = _center_position(WINDOW_WIDTH, WINDOW_HEIGHT)
         _SetWindowPos(
@@ -110,6 +113,7 @@ def _restore_main_window(hwnd, force_center: bool = False):
             SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW
         )
     else:
+        user32.ShowWindow(hwnd, SW_RESTORE)
         _SetWindowPos(
             hwnd, 0, 0, 0, 0, 0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW
@@ -122,26 +126,25 @@ def _find_hwnd(title):
     candidates = []
 
     def _cb(hwnd, _):
-        if user32.IsWindowVisible(hwnd):
-            length = user32.GetWindowTextLengthW(hwnd)
-            if length > 0:
-                buf = ctypes.create_unicode_buffer(length + 1)
-                user32.GetWindowTextW(hwnd, buf, length + 1)
-                if buf.value == title:
-                    rect = RECT()
-                    user32.GetWindowRect(hwnd, ctypes.byref(rect))
-                    area = max(0, rect.right - rect.left) * max(0, rect.bottom - rect.top)
-                    exstyle = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
-                    score = area
-                    if exstyle & WS_EX_APPWINDOW:
-                        score += 1_000_000_000
-                    if exstyle & WS_EX_TOOLWINDOW:
-                        score -= 1_000_000_000
-                    if user32.GetParent(hwnd):
-                        score -= 1_000_000
-                    if user32.GetWindow(hwnd, GW_OWNER):
-                        score -= 1_000_000
-                    candidates.append((score, hwnd))
+        length = user32.GetWindowTextLengthW(hwnd)
+        if length > 0:
+            buf = ctypes.create_unicode_buffer(length + 1)
+            user32.GetWindowTextW(hwnd, buf, length + 1)
+            if buf.value == title:
+                rect = RECT()
+                user32.GetWindowRect(hwnd, ctypes.byref(rect))
+                area = max(0, rect.right - rect.left) * max(0, rect.bottom - rect.top)
+                exstyle = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+                score = area
+                if exstyle & WS_EX_APPWINDOW:
+                    score += 1_000_000_000
+                if exstyle & WS_EX_TOOLWINDOW:
+                    score -= 1_000_000_000
+                if user32.GetParent(hwnd):
+                    score -= 1_000_000
+                if user32.GetWindow(hwnd, GW_OWNER):
+                    score -= 1_000_000
+                candidates.append((score, hwnd))
         return True
     WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
     user32.EnumWindows(WNDENUMPROC(_cb), 0)
@@ -157,8 +160,17 @@ class WindowAPI:
         self._window = window
         self._hwnd = None
         self._native_theme = "light"
+        self._drag_enabled_at = time.monotonic() + 2.0
 
     def _get_hwnd(self):
+        if not self._hwnd:
+            native = getattr(self._window, "native", None)
+            handle = getattr(native, "Handle", None)
+            try:
+                if handle:
+                    self._hwnd = int(handle.ToInt64())
+            except Exception:
+                self._hwnd = None
         if not self._hwnd:
             self._hwnd = _find_hwnd(config.APP_NAME)
         return self._hwnd
@@ -192,7 +204,7 @@ class WindowAPI:
         return True
 
 
-def create_window(port: int, icon_path: str = None, title_icon_path: str = None):
+def create_window(port: int, icon_path: str = None, title_icon_path: str = None, start_hidden: bool = False):
     """创建原生桌面窗口，返回 (window, start_fn)"""
     import webview
 
@@ -207,7 +219,7 @@ def create_window(port: int, icon_path: str = None, title_icon_path: str = None)
     x, y = _center_position(WINDOW_WIDTH, WINDOW_HEIGHT)
     window = webview.create_window(
         title=config.APP_NAME,
-        url=f"http://localhost:{port}?desktop=1&{frame_query}&{nativebar_query}",
+        url=f"http://127.0.0.1:{port}?desktop=1&{frame_query}&{nativebar_query}",
         width=WINDOW_WIDTH,
         height=WINDOW_HEIGHT,
         x=x,
@@ -216,6 +228,7 @@ def create_window(port: int, icon_path: str = None, title_icon_path: str = None)
         resizable=False,
         frameless=config.BORDERLESS_WINDOW,
         easy_drag=False,
+        hidden=start_hidden,
         js_api=api,
     )
     api._window = window
@@ -295,6 +308,10 @@ def create_window(port: int, icon_path: str = None, title_icon_path: str = None)
                 title.Size = Size(px(180), px(26))
 
                 def _drag(sender, args):
+                    if time.monotonic() < getattr(api, "_drag_enabled_at", 0):
+                        return
+                    if not (user32.GetAsyncKeyState(VK_LBUTTON) & 0x8000):
+                        return
                     if args.Button == WinForms.MouseButtons.Left:
                         hwnd = api._get_hwnd()
                         if hwnd:
@@ -311,7 +328,7 @@ def create_window(port: int, icon_path: str = None, title_icon_path: str = None)
                 button_panel.FlowDirection = WinForms.FlowDirection.RightToLeft
                 button_panel.WrapContents = False
                 button_panel.Dock = WinForms.DockStyle.Right
-                button_panel.Width = px(196)
+                button_panel.Width = px(132)
                 button_panel.Height = bar_h
                 button_panel.Padding = WinForms.Padding(0, px(6), px(8), 0)
                 button_panel.BackColor = Color.Transparent
@@ -355,16 +372,12 @@ def create_window(port: int, icon_path: str = None, title_icon_path: str = None)
 
                 close_btn = _button("\uE8BB", Color.FromArgb(220, 38, 38), font_size=8, close=True, font_name="Segoe MDL2 Assets")
                 min_btn = _button("\uE921", font_size=8, font_name="Segoe MDL2 Assets")
-                theme_btn = _button("◐", font_size=10)
-                update_btn = _button("↻", font_size=10)
+                settings_btn = _button("\uE713", font_size=8, font_name="Segoe MDL2 Assets")
                 ai_btn = _button("AI", bold=True, font_size=8)
-                export_btn = _button("↓", font_size=11)
 
                 tips = WinForms.ToolTip()
-                tips.SetToolTip(export_btn, "导出数据")
                 tips.SetToolTip(ai_btn, "AI 分析")
-                tips.SetToolTip(update_btn, "检查更新")
-                tips.SetToolTip(theme_btn, "切换主题")
+                tips.SetToolTip(settings_btn, "设置")
                 tips.SetToolTip(min_btn, "最小化")
                 tips.SetToolTip(close_btn, "隐藏到托盘")
 
@@ -384,23 +397,15 @@ def create_window(port: int, icon_path: str = None, title_icon_path: str = None)
                 def _close(sender, args):
                     api.hide_to_tray()
 
-                def _theme(sender, args):
-                    _run_js("toggleTheme()")
-
-                def _update(sender, args):
-                    _run_js("openUpdate()")
-
-                def _export(sender, args):
-                    _run_js("openExport()")
+                def _settings(sender, args):
+                    _run_js("openSettings()")
 
                 def _insights(sender, args):
                     _run_js("openInsights()")
 
                 min_btn.Click += _minimize
                 close_btn.Click += _close
-                theme_btn.Click += _theme
-                update_btn.Click += _update
-                export_btn.Click += _export
+                settings_btn.Click += _settings
                 ai_btn.Click += _insights
                 
                 def _form_closing(sender, args):
@@ -432,13 +437,10 @@ def create_window(port: int, icon_path: str = None, title_icon_path: str = None)
                         if logo.Image:
                             logo.BackColor = Color.Transparent
                         title.ForeColor = text
-                        for btn in (export_btn, ai_btn, update_btn, theme_btn, min_btn, close_btn):
+                        for btn in (ai_btn, settings_btn, min_btn, close_btn):
                             btn.BackColor = bar_bg
-                        export_btn.ForeColor = muted
                         ai_btn.ForeColor = muted
-                        update_btn.ForeColor = muted
-                        theme_btn.Text = "☀" if dark else "◐"
-                        theme_btn.ForeColor = muted
+                        settings_btn.ForeColor = muted
                         min_btn.ForeColor = muted
                         close_btn.ForeColor = red
 
@@ -456,15 +458,14 @@ def create_window(port: int, icon_path: str = None, title_icon_path: str = None)
                 panel.Controls.Add(title)
                 button_panel.Controls.Add(close_btn)
                 button_panel.Controls.Add(min_btn)
-                button_panel.Controls.Add(theme_btn)
-                button_panel.Controls.Add(update_btn)
+                button_panel.Controls.Add(settings_btn)
                 button_panel.Controls.Add(ai_btn)
-                button_panel.Controls.Add(export_btn)
                 panel.Controls.Add(button_panel)
                 native.Controls.Add(panel)
                 panel.BringToFront()
                 _apply_native_theme(api._native_theme)
                 api._native_titlebar_installed = True
+                api._drag_enabled_at = time.monotonic() + 1.2
                 return None
 
             if native.InvokeRequired:
@@ -486,18 +487,38 @@ def create_window(port: int, icon_path: str = None, title_icon_path: str = None)
         exstyle = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
         exstyle = (exstyle | WS_EX_APPWINDOW) & ~WS_EX_TOOLWINDOW
         user32.SetWindowLongW(hwnd, GWL_EXSTYLE, exstyle)
-        _restore_main_window(hwnd, force_center=not startup_position_fixed["done"])
-        startup_position_fixed["done"] = True
+        if not startup_position_fixed["done"]:
+            if start_hidden:
+                _SetWindowPos(
+                    hwnd, 0, x, y, WINDOW_WIDTH, WINDOW_HEIGHT,
+                    SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_NOACTIVATE,
+                )
+            elif _is_offscreen_or_tiny(hwnd):
+                _restore_main_window(hwnd, force_center=True)
+            else:
+                user32.ShowWindow(hwnd, SW_RESTORE)
+                _SetWindowPos(
+                    hwnd, 0, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW,
+                )
+            startup_position_fixed["done"] = True
+        else:
+            _SetWindowPos(
+                hwnd, 0, 0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED
+            )
 
     def _fix_window_style():
         import threading
         import time
 
         def _loop():
-            for _ in range(8):
-                _fix_window_style_once()
+            for _ in range(3):
                 _install_native_titlebar_once()
-                time.sleep(0.25)
+                _fix_window_style_once()
+                if startup_position_fixed["done"] and getattr(api, "_native_titlebar_installed", False):
+                    break
+                time.sleep(0.2)
 
         threading.Thread(target=_loop, daemon=True).start()
 

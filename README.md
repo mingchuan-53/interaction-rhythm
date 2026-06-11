@@ -1,113 +1,119 @@
 # 交互节律
 
-键盘、鼠标响应和应用使用节律观察器。
+[![Windows](https://img.shields.io/badge/Windows-10%2B-15803d)](#)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-2563eb)](#)
+[![License: MIT](https://img.shields.io/badge/License-MIT-111827.svg)](LICENSE)
+
+交互节律是一个本地优先的 Windows 桌面小工具，用来观察键盘响应、鼠标响应和前台应用使用节律。
+
+它不尝试判断你是不是“高效”，也不记录输入内容。它只把一天里的操作强度、应用停留和时间分布整理成更容易回忆的线索：什么时候最活跃，主要和哪些应用发生交互，哪些时间段更像输入、浏览、整理或停留。
+
+> 当前仓库只包含 Windows 桌面端。Android 版仍在单独实验中，暂不随本次开源。
 
 ## 功能
 
-- 键盘响应计数：全局键盘监听，统计每小时/每天键盘响应。
-- 鼠标响应计数：记录点击和滚轮响应，不记录鼠标移动。
-- 应用使用时间：追踪每个应用的真实前台使用时长。
-- Web 仪表盘：键鼠响应、贡献图式小时热力图、两列应用时长排行。
-- 真实应用图标：本地提取正在运行应用的 exe 图标并缓存为 PNG。
-- 系统托盘：关闭按钮默认隐藏到托盘，只能从托盘菜单完全退出。
-- 应用内更新：可检查远程更新清单，下载朋友测试包后关闭自身、替换并重启。
-- 窄窗口一屏呈现：页面宽度贴合热力图，首页直接展示完整核心统计。
+| 模块 | 作用 |
+| --- | --- |
+| 键盘 / 鼠标响应 | 只记录次数，不记录按键内容、鼠标位置或文本内容。 |
+| 小时热力图 | 以小时为格子查看最近 6 天的响应节律，可切换键盘、鼠标显示。 |
+| 应用时长排行 | 查看前台应用的停留时长，并支持点开单个应用分析。 |
+| 单应用强度 | 对照应用时长和键鼠响应，发现“停留很多但操作少”或“时间不长但交互很密”的应用。 |
+| 节律助手 | 本地规则分析，先给结论，再挑少量重点发现和建议。 |
+| 托盘后台 | 关闭窗口默认隐藏到托盘，可从托盘打开、刷新或退出后台。 |
+| 数据导出 | 支持 JSON 和 CSV，方便后续归档或自行分析。 |
+| 检查更新 | 可读取发布清单，下载新版压缩包并启动安装替换流程。 |
 
-## 快速开始
+## 隐私边界
 
-```bash
-# 安装依赖
+交互节律默认只在本机运行，数据保存在本地 SQLite 数据库中。
+
+它会记录：
+
+- 每批键盘响应次数
+- 每批鼠标响应次数
+- 前台应用名称、窗口标题、应用路径
+- 应用前台停留的开始和结束时间
+- 键盘 / 鼠标响应对应的前台应用
+
+它不会记录：
+
+- 具体按下了哪个键
+- 输入的文字内容
+- 鼠标坐标或屏幕截图
+- 浏览器页面内容
+- 后台上传数据
+
+## 节律助手如何工作
+
+节律助手当前使用本地规则分析，不调用外部 AI 模型。它会从这些线索中选少量最值得看的内容：
+
+- 全局键盘 / 鼠标响应比例
+- 每小时响应高峰
+- 应用时长占比
+- 单个应用的响应占比
+- 单个应用的响应密度
+- 应用回返次数
+- 最近两次分析之间的变化
+
+因此它更像“帮你回忆电脑前发生了什么”的观察助手，而不是生产力评分器。
+
+## 本地运行
+
+环境要求：
+
+- Windows 10 或更高版本
+- Python 3.10 或更高版本
+
+安装依赖：
+
+```powershell
 pip install -r requirements.txt
+```
 
-# 启动
+启动：
+
+```powershell
 python main.py
 ```
 
-或双击 `start.bat` 自动创建虚拟环境并安装依赖。
+启动后会打开一个无边框桌面窗口，并在后台托盘保留入口。
 
-启动后打开本地仪表盘：
+## 打包
 
-```text
-http://localhost:18923
+项目使用 PyInstaller 打包：
+
+```powershell
+.\build.ps1
 ```
 
-## 窗口行为
+构建完成后主要产物在：
 
-- 最小化按钮：最小化到任务栏。
-- 关闭按钮：隐藏到托盘，后台继续记录。
-- 完全退出：只能从托盘菜单选择“退出交互节律”。
+- `dist/current/`：当前可运行版本
+- `dist/releases/交互节律.zip`：可分发压缩包
+- `dist/releases/update.json`：更新清单
 
-## 页面
+`dist/`、`data/`、数据库文件和调试截图不会进入 Git 仓库。
 
-| 页面 | 地址 | 说明 |
-| --- | --- | --- |
-| 仪表盘 | `http://localhost:18923/` | 键鼠响应、贡献图式小时热力图、应用时长排行 |
-
-## 项目结构
+## 目录
 
 ```text
-interaction-rhythm/
-├── main.py          # 主入口
-├── config.py        # 配置
-├── db.py            # SQLite 数据库
-├── monitor.py       # 键盘、鼠标、窗口监控
-├── stats.py         # HTTP API 服务
-├── tray.py          # 系统托盘图标
-├── static/
-│   └── index.html   # 仪表盘页面
-├── data/            # 运行时数据，自动创建
-│   ├── tracker.db   # SQLite 数据库
-│   └── icons/       # 应用图标 PNG 缓存
-├── dist/
-│   ├── build/        # 临时打包输出，可删除重建
-│   ├── current/      # 本机正在使用的当前版，桌面快捷方式指向这里
-│   ├── releases/     # 可回溯的版本包和发朋友的测试包
-│   └── archive/      # 旧包和旧快捷方式归档
-├── requirements.txt
-├── start.bat        # Windows 一键启动
-└── README.md
+.
+├─ main.py              # 应用入口、单实例和启动流程
+├─ monitor.py           # 键盘、鼠标、前台窗口记录
+├─ db.py                # SQLite 数据、统计、节律助手逻辑
+├─ stats.py             # 本地 HTTP API 与导出接口
+├─ window.py            # 桌面窗口和拖动桥接
+├─ tray.py              # 托盘菜单与后台行为
+├─ update_manager.py    # 更新检查和安装流程
+├─ settings.py          # 用户设置
+├─ static/index.html    # 主界面
+└─ build.ps1            # Windows 打包脚本
 ```
 
-## 打包和发布层级
+## 版本日志
 
-运行 `build.ps1` 后，目录只按四层使用：
+完整开发脉络见 [CHANGELOG.md](CHANGELOG.md)。
 
-| 目录 | 用途 |
-| --- | --- |
-| `dist/build/InteractionRhythm` | PyInstaller 临时输出，下一次打包会覆盖。 |
-| `dist/current/InteractionRhythm` | 本机当前运行版，桌面 `交互节律.lnk` 指向这里。 |
-| `dist/releases/InteractionRhythm-v1.2` | 带本机数据的版本快照，用于回退和核对。 |
-| `dist/releases/交互节律.zip` | 发给朋友测试的分享包，不包含本机数据库。 |
-| `dist/releases/update.json` | 更新清单，发布时和 `交互节律.zip` 一起上传到稳定地址。 |
-| `dist/archive/` | 旧包、旧 zip、旧快捷方式。 |
+## 许可
 
-桌面快捷方式使用 `dist/current/InteractionRhythm/InteractionRhythm.ico` 作为图标。若 Windows 桌面仍显示旧图标，通常是 Explorer 图标缓存尚未刷新。
-
-## 技术栈
-
-- Python：pynput、psutil、pystray、pywebview、ctypes、Pillow。
-- SQLite：本地数据存储。
-- 原生 HTML/CSS/JS：无外部依赖的 Web 仪表盘。
-
-## 配置
-
-编辑 `config.py`：
-
-| 配置项 | 默认值 | 说明 |
-| --- | --- | --- |
-| `PORT` | 18923 | Web 服务端口 |
-| `POLL_INTERVAL` | 0.5 | 窗口轮询间隔，单位秒 |
-| `BATCH_INTERVAL` | 1 | 键鼠计数批量写入间隔，单位秒 |
-| `DB_RETENTION_DAYS` | 30 | 数据保留天数 |
-| `HEATMAP_DAYS` | 6 | 首页热力图历史天数：当前日期前 5 天 + 当前日期，不再显示未来空白列 |
-| `HOURLY_RETENTION_DAYS` | 180 | 逐小时汇总保留天数 |
-| `UPDATE_MANIFEST_URL` | 空 | 远程 `update.json` 地址；也可用环境变量 `INTERACTION_RHYTHM_UPDATE_URL` 覆盖 |
-
-也可以在运行目录或 `data/` 下创建 `update-url.txt`，只写一行远程 `update.json` 地址。应用会优先读取这个文件。
-
-## 数据隐私
-
-- 所有数据仅存储在本地 SQLite 数据库。
-- 默认不上传任何数据。只有配置更新清单地址时，应用才会请求 `update.json` 检查版本。
-- 仅记录按键、点击和滚轮数量，不记录具体按键内容，也不记录鼠标移动轨迹。
-- 应用图标来自本机可执行文件路径，只缓存在本地 `data/icons/`。
+本项目使用 [MIT License](LICENSE)。

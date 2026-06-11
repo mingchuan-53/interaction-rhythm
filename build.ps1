@@ -25,6 +25,11 @@ $ArchiveRoot = Join-Path $DistRoot "archive"
 $BuildDir = Join-Path $BuildRoot $AppExeName
 $CurrentDir = Join-Path $CurrentRoot $AppExeName
 $BackupDataDir = Join-Path $PSScriptRoot ".build-data-backup"
+$ManifestPath = Join-Path $ReleaseRoot "update.json"
+$ManifestUrl = $env:INTERACTION_RHYTHM_UPDATE_URL
+if ([string]::IsNullOrWhiteSpace($ManifestUrl)) {
+  $ManifestUrl = (New-Object System.Uri($ManifestPath)).AbsoluteUri
+}
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  交互节律 v$Version 打包脚本" -ForegroundColor Cyan
@@ -74,11 +79,9 @@ Write-Host "[3/6] 使用 PyInstaller 打包..." -ForegroundColor Yellow
   --name $AppExeName `
   --icon app.ico `
   --add-data "static;static" `
-  --hidden-import pynput.keyboard._win32 `
-  --hidden-import pynput.mouse._win32 `
-  --hidden-import pynput._util.win32 `
   --hidden-import webview `
   --hidden-import update_manager `
+  --hidden-import settings `
   --hidden-import clr `
   --hidden-import System `
   --exclude-module PIL.AvifImagePlugin `
@@ -127,12 +130,14 @@ if ((Test-Path $BackupDataDir) -and $includeData) {
   Write-Host "  已生成无历史数据构建" -ForegroundColor DarkGreen
 }
 if (Test-Path $BackupDataDir) { Remove-Item -Recurse -Force $BackupDataDir }
+Set-Content -LiteralPath "$BuildDir\update-url.txt" -Value $ManifestUrl -Encoding UTF8
+Set-Content -LiteralPath "$BuildDir\data\update-url.txt" -Value $ManifestUrl -Encoding UTF8
 
-$vbs = @"
-Set WshShell = CreateObject("WScript.Shell")
-WshShell.CurrentDirectory = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName)
-WshShell.Run "cmd /c $AppExeName.exe", 0, False
-"@
+$vbs = @(
+  'Set WshShell = CreateObject("WScript.Shell")'
+  'WshShell.CurrentDirectory = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName)'
+  "WshShell.Run ""cmd /c $AppExeName.exe --background"", 0, False"
+) -join "`r`n"
 [System.IO.File]::WriteAllText("$BuildDir\StartHidden.vbs", $vbs, [System.Text.Encoding]::ASCII)
 
 # [5/6] 发布到 current 和 releases
@@ -180,12 +185,12 @@ $manifest = [ordered]@{
   size = $shareZipSize
   published_at = $publishedAt
   notes = @(
-    "首页热力图调整为今天加前五天，保留居中留白，减少拥挤感。",
-    "应用排行四周留白更舒适，窗口尺寸调整为 520×585。"
+    "新增单应用键盘、鼠标响应归属，用于识别应用强度、回返和停留关系。",
+    "节律助手改为结论、重点发现和建议，只保留最值得看的内容。",
+    "补齐开源文档、版本日志和桌面端发布说明。"
   )
 }
-$manifestPath = Join-Path $ReleaseRoot "update.json"
-$manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+$manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $ManifestPath -Encoding UTF8
 
 # [6/6] 创建桌面快捷方式
 Write-Host "[6/6] 创建桌面快捷方式..." -ForegroundColor Yellow

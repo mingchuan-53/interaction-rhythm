@@ -23,6 +23,7 @@ app.ico
 startup-error.log
 source-test.*
 .build-data-backup/
+debug-*.png
 
 # IDE
 .vscode/

@@ -177,7 +177,7 @@
     .sec-head{display:flex;align-items:center;gap:7px;margin-bottom:10px}
     .sec-head .dot-sm{width:4px;height:4px;border-radius:50%;flex-shrink:0}
     .sec-head h2{font-size:13.5px;font-weight:680;color:var(--text2)}
-    .app-list{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:29px;column-gap:10px;row-gap:4px;min-height:0}
+    .app-list{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(5,29px);grid-auto-flow:column;grid-auto-rows:29px;column-gap:10px;row-gap:4px;min-height:0}
     .app-row{display:flex;align-items:center;gap:5px;padding:2px 4px;border-radius:6px;transition:background .12s;flex-shrink:0;min-width:0;cursor:pointer}
     .app-row:hover{background:var(--bar-bg)}
     .app-row:active{background:var(--primary-dim)}
@@ -216,6 +216,12 @@
       box-shadow:0 18px 48px rgba(0,0,0,.28);
       overflow:hidden;display:flex;flex-direction:column;
     }
+    .modal-card.settings-modal{max-width:430px;max-height:none}
+    .modal-card.insight-modal{max-width:500px;max-height:none}
+    .modal-card.update-modal{max-width:440px;max-height:none}
+    .modal-card.settings-modal .modal-body,
+    .modal-card.insight-modal .modal-body,
+    .modal-card.update-modal .modal-body{overflow:hidden}
     .modal-head{height:48px;display:flex;align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0}
     .modal-title{font-size:16px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .modal-close{margin-left:auto;width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center}
@@ -255,8 +261,31 @@
     .action-card b{display:block;font-size:17px;margin-bottom:6px}
     .action-card span{font-size:14px;color:var(--text3);line-height:1.45}
     .muted{font-size:14px;color:var(--text4);line-height:1.65}
-    .insight-list{display:grid;gap:8px;margin-top:8px}
-    .insight-item{background:var(--surface-hover);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:14px;color:var(--text2);line-height:1.6}
+    .insight-list{display:grid;gap:7px;margin-top:7px}
+    .insight-item{background:var(--surface-hover);border:1px solid var(--border);border-radius:9px;padding:9px 10px;font-size:13px;color:var(--text2);line-height:1.48}
+    .insight-item.lead{font-size:14px;color:var(--text);background:var(--primary-dim);border-color:rgba(22,163,74,.18)}
+    .insight-section{margin-top:10px}
+    .insight-section h3{font-size:13px;color:var(--text2);font-weight:700;margin:0 0 6px}
+    .insight-foot{margin-top:10px;font-size:11.5px;color:var(--text4);line-height:1.45}
+    .settings-panel{display:grid;gap:9px}
+    .settings-section{background:var(--surface-hover);border:1px solid var(--border);border-radius:10px;padding:10px;display:grid;gap:8px}
+    .settings-section h3{font-size:12.5px;font-weight:700;color:var(--text2);margin:0}
+    .setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:38px}
+    .setting-copy{min-width:0}
+    .setting-copy b{display:block;font-size:14px;color:var(--text);font-weight:700;line-height:1.25}
+    .setting-copy span{display:block;font-size:11.5px;color:var(--text4);line-height:1.35;margin-top:2px}
+    .switch{width:42px;height:24px;border-radius:999px;border:1px solid var(--border-hover);background:var(--bar-bg);position:relative;cursor:pointer;flex-shrink:0;transition:background .16s ease,border-color .16s ease}
+    .switch::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;left:2px;top:2px;background:var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.18);transition:transform .16s ease}
+    .switch.on{background:var(--primary);border-color:var(--primary)}
+    .switch.on::after{transform:translateX(18px)}
+    .settings-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .settings-action{border:1px solid var(--border);background:var(--surface);border-radius:9px;padding:9px 10px;text-align:left;color:var(--text);cursor:pointer;min-height:48px}
+    .settings-action:hover{border-color:var(--border-hover);background:var(--primary-dim)}
+    .settings-action b{display:block;font-size:14px;font-weight:700;margin-bottom:4px}
+    .settings-action span{display:block;font-size:12px;line-height:1.35;color:var(--text4)}
+    .theme-segment{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+    .theme-choice{height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text3);cursor:pointer;font-size:13px;font-weight:650}
+    .theme-choice.active{border-color:rgba(22,163,74,.35);background:var(--primary-dim);color:var(--primary)}
 
     /* ── 移动端优化 ─────────────────── */
     @media(max-width:430px){
@@ -266,13 +295,14 @@
       .heat-card{min-height:180px}
       .heat-days{grid-template-columns:repeat(var(--heat-day-count),calc(var(--heat-cell) * 4 + var(--heat-gap) * 3));gap:8px}
       .heat-grid{grid-template-columns:repeat(var(--heat-day-count),calc(var(--heat-cell) * 4 + var(--heat-gap) * 3));gap:8px}
-      .app-list{grid-template-columns:1fr}
+      .app-list{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row;grid-auto-rows:36px}
       .app-name{width:80px}
       
       /* 触摸优化 */
       .hc{min-width: 12px; min-height: 12px;}
       .app-row{padding: 6px 4px; min-height: 36px;}
       .tool-btn, .theme-btn{width: 32px; height: 32px;}
+      .settings-actions{grid-template-columns:1fr}
       .heat-head{align-items:flex-start}
       .heat-title{gap:6px}
       .modal{align-items:flex-end;padding:0}
@@ -342,16 +372,12 @@
         <div class="logo">节</div>
         <h1>交互节律</h1>
       </div>
-      <button class="tool-btn" onclick="openExport()" title="导出数据" aria-label="导出数据">
-        <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-      </button>
       <button class="tool-btn" onclick="openInsights()" title="节律助手" aria-label="节律助手">
         <svg viewBox="0 0 24 24"><path d="M12 3l1.7 5.1L19 10l-5.3 1.9L12 17l-1.7-5.1L5 10l5.3-1.9z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>
       </button>
-      <button class="tool-btn" onclick="openUpdate()" title="检查更新" aria-label="检查更新">
-        <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-15.1-6.7"/><path d="M3 5v6h6"/><path d="M3 12a9 9 0 0 0 15.1 6.7"/><path d="M21 19v-6h-6"/></svg>
+      <button class="tool-btn" onclick="openSettings()" title="设置" aria-label="设置">
+        <svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1z"/></svg>
       </button>
-      <button class="theme-btn" onclick="toggleTheme()" id="theme-toggle" title="切换主题">☀️</button>
       <button class="window-btn" onclick="windowControl('minimize')" title="最小化" aria-label="最小化">
         <svg viewBox="0 0 24 24"><path d="M7 12h10"/></svg>
       </button>
@@ -407,7 +433,7 @@
   </div>
 
   <div class="modal" id="modal" hidden>
-    <div class="modal-card">
+    <div class="modal-card" id="modal-card">
       <div class="modal-head">
         <div class="modal-title" id="modal-title"></div>
         <button class="modal-close" onclick="closeModal()" title="关闭" aria-label="关闭">
@@ -419,12 +445,15 @@
   </div>
 
 <script>
+const BOOT_QUERY=new URLSearchParams(location.search);
+const IS_DESKTOP_BOOT=BOOT_QUERY.get('desktop')==='1';
+
 // PWA 相关变量
 let deferredPrompt = null;
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
 // 注册 Service Worker
-if ('serviceWorker' in navigator) {
+if (!IS_DESKTOP_BOOT && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then(registration => {
@@ -470,17 +499,17 @@ document.getElementById('pwa-dismiss')?.addEventListener('click', () => {
 
 // 离线状态检测
 window.addEventListener('online', () => {
-  document.getElementById('offline-indicator').classList.remove('show');
+  setOfflineMessage(false);
   loadData(); // 重新加载数据
 });
 
 window.addEventListener('offline', () => {
-  document.getElementById('offline-indicator').classList.add('show');
+  setOfflineMessage(true,'离线模式 - 数据可能不是最新');
 });
 
 // 检查初始网络状态
 if (!navigator.onLine) {
-  document.getElementById('offline-indicator').classList.add('show');
+  setOfflineMessage(true,'离线模式 - 数据可能不是最新');
 }
 
 var QUERY=new URLSearchParams(location.search);
@@ -488,6 +517,14 @@ var IS_DESKTOP=QUERY.get('desktop')==='1';
 var IS_NATIVEBAR=QUERY.get('nativebar')==='1';
 if(IS_DESKTOP){document.body.classList.add('is-desktop')}
 if(IS_NATIVEBAR){document.body.classList.add('nativebar')}
+
+var dataRetryTimer=null;
+function setOfflineMessage(show,text){
+  var el=document.getElementById('offline-indicator');
+  if(!el)return;
+  if(text)el.textContent=text;
+  el.classList.toggle('show',!!show);
+}
 
 async function windowControl(action){
   try{
@@ -508,7 +545,11 @@ function syncNativeTheme(t){
 }
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme',t);
-  document.getElementById('theme-toggle').textContent=t==='dark'?'☀️':'🌙';
+  var themeToggle=document.getElementById('theme-toggle');
+  if(themeToggle)themeToggle.textContent=t==='dark'?'☀️':'🌙';
+  document.querySelectorAll('[data-theme-choice]').forEach(function(btn){
+    btn.classList.toggle('active',btn.dataset.themeChoice===t);
+  });
   syncNativeTheme(t);
   
   // 更新 meta theme-color
@@ -517,7 +558,8 @@ function applyTheme(t){
     metaTheme.content = t === 'dark' ? '#0d1216' : '#f4f6f5';
   }
 }
-function toggleTheme(){var n=getTheme()==='dark'?'light':'dark';localStorage.setItem('tt-theme',n);applyTheme(n)}
+function setThemeChoice(t){localStorage.setItem('tt-theme',t);applyTheme(t)}
+function toggleTheme(){var n=getTheme()==='dark'?'light':'dark';setThemeChoice(n)}
 applyTheme(getTheme());
 window.addEventListener('pywebviewready',function(){syncNativeTheme(getTheme())});
 
@@ -533,16 +575,19 @@ var FILLS=['f0','f1','f2','f3','f4','f5'];
 var RANKS=['r0','r1','r2','r3','rx','rx','rx','rx','rx','rx'];
 var APP_MAP={'Code':'VS Code','Code - Insiders':'VS Code','chrome':'Chrome','msedge':'Edge','firefox':'Firefox','opera':'Opera','brave':'Brave','explorer':'文件管理器','explorer.exe':'文件管理器','cmd':'命令提示符','powershell':'PowerShell','WindowsTerminal':'终端','wt':'终端','pwsh':'PowerShell','bash':'Bash','wsl':'WSL','devenv':'VS','idea64':'IntelliJ','idea':'IntelliJ','webstorm64':'WebStorm','pycharm64':'PyCharm','clion64':'CLion','notepad++':'Notepad++','notepad':'记事本','Sublime Text':'Sublime','atom':'Atom','cursor':'Cursor','Cursor':'Cursor','Trae':'Trae','Windsurf':'Windsurf','Codex':'Codex','codex':'Codex','slack':'Slack','Teams':'Teams','wechat':'微信','WeChat':'微信','QQ':'QQ','TIM':'TIM','dingtalk':'钉钉','Dingtalk':'钉钉','DingTalk':'钉钉','feishu':'飞书','Lark':'飞书','telegram':'Telegram','Discord':'Discord','whatsapp':'WhatsApp','zoom':'Zoom','ZoomIt':'ZoomIt','Spotify':'Spotify','网易云音乐':'网易云','CloudMusic':'网易云','QQMusic':'QQ音乐','kugou':'酷狗','KuGou':'酷狗','PotPlayer':'PotPlayer','vlc':'VLC','mpv':'mpv','Photoshop':'Photoshop','Illustrator':'Illustrator','Figma':'Figma','figma':'Figma','Adobe Premiere Pro':'Premiere','AfterFX':'AE','Sai':'SAI','SAI2':'SAI2','ClipStudioPaint':'CSP','steam':'Steam','EpicGamesLauncher':'Epic','epic':'Epic','obsidian':'Obsidian','Notion':'Notion','Typora':'Typora','Mark Text':'Mark Text','logseq':'Logseq','Word':'Word','WINWORD':'Word','Excel':'Excel','EXCEL':'Excel','PowerPoint':'PPT','POWERPNT':'PPT','OUTLOOK':'Outlook','OneNote':'OneNote','ONENOTE':'OneNote','Postman':'Postman','Docker Desktop':'Docker','docker':'Docker','Git':'Git','GitHub Desktop':'GitHub','node':'Node','python':'Python','python3':'Python','pythonw':'Python','pythonw.exe':'Python','OBS':'OBS','obs64':'OBS','ShareX':'ShareX','Snipaste':'Snipaste','AutoHotkey':'AHK','Quicker':'Quicker','Flow.Launcher':'Flow','Everything':'Everything','vmware':'VMware','TypeTracker':'交互节律','TypeTracker.exe':'交互节律','InteractionRhythm':'交互节律','InteractionRhythm.exe':'交互节律','交互节律':'交互节律','Claude':'Claude','ChatGPT':'ChatGPT','Perplexity':'Perplexity','DeepL':'DeepL','有道词典':'有道','WPS':'WPS','wps':'WPS','et':'WPS表格','wpp':'WPS演示','Foxmail':'Foxmail','qBittorrent':'qBit','studio64':'Android','RustRover':'RustRover','fleet':'Fleet','Unity':'Unity','UnrealEditor':'UE','Godot':'Godot','quark':'夸克','quark.exe':'夸克','RevoUnin':'Revo卸载','RevoUnin.exe':'Revo卸载','GeekDesk':'GeekDesk','GeekDesk.exe':'GeekDesk','CLaunch':'CLaunch','CLaunch.exe':'CLaunch','OpenCode':'OpenCode'};
 var APP_ICONS={'Code':'💻','Code - Insiders':'💻','Code.exe':'💻','chrome':'🌐','msedge':'🌐','msedge.exe':'🌐','firefox':'🦊','opera':'🌐','brave':'🦁','explorer':'📁','explorer.exe':'📁','cmd':'⬛','powershell':'🔵','WindowsTerminal':'⬛','WindowsTerminal.exe':'⬛','wt':'⬛','pwsh':'🔵','devenv':'🟣','idea64':'🧠','idea':'🧠','webstorm64':'🧠','pycharm64':'🐍','notepad++':'📝','notepad':'📝','Sublime Text':'📝','atom':'⚛️','cursor':'🖱️','Cursor':'🖱️','Trae':'💻','Windsurf':'🏄','Codex':'🤖','codex':'🤖','slack':'💬','Teams':'👥','wechat':'💬','WeChat':'💬','QQ':'🐧','TIM':'🐧','dingtalk':'📌','Dingtalk':'📌','DingTalk':'📌','feishu':'🐦','Lark':'🐦','telegram':'✈️','Discord':'🎮','whatsapp':'💬','zoom':'📹','ZoomIt':'📹','Spotify':'🎵','网易云音乐':'🎵','CloudMusic':'🎵','QQMusic':'🎵','kugou':'🎵','KuGou':'🎵','PotPlayer':'🎬','vlc':'🎬','mpv':'🎬','Photoshop':'🎨','Illustrator':'🎨','Figma':'🎨','figma':'🎨','Adobe Premiere Pro':'🎬','AfterFX':'🎬','Sai':'🎨','SAI2':'🎨','ClipStudioPaint':'🎨','steam':'🎮','EpicGamesLauncher':'🎮','epic':'🎮','obsidian':'📓','Notion':'📓','Typora':'📝','Mark Text':'📝','logseq':'📓','Word':'📄','WINWORD':'📄','Excel':'📊','EXCEL':'📊','PowerPoint':'📊','POWERPNT':'📊','OUTLOOK':'📧','OneNote':'📓','Postman':'📮','Docker Desktop':'🐳','docker':'🐳','Git':'📦','GitHub Desktop':'🐙','node':'💚','python':'🐍','python3':'🐍','pythonw':'🐍','pythonw.exe':'🐍','OBS':'🎥','obs64':'🎥','ShareX':'📸','Snipaste':'📸','AutoHotkey':'⌨️','Quicker':'⚡','Flow.Launcher':'🚀','Everything':'🔍','vmware':'💻','TypeTracker':'▦','交互节律':'▦','InteractionRhythm':'▦','Claude':'🤖','ChatGPT':'🤖','Perplexity':'🔍','DeepL':'🌐','有道词典':'📖','WPS':'📄','wps':'📄','et':'📊','wpp':'📊','Foxmail':'📧','qBittorrent':'📥','studio64':'📱','RustRover':'🦀','fleet':'🧠','Unity':'🎮','UnrealEditor':'🎮','Godot':'🎮','quark':'🌐','quark.exe':'🌐','RevoUnin':'🗑️','RevoUnin.exe':'🗑️','GeekDesk':'🖥️','GeekDesk.exe':'🖥️','CLaunch':'🖥️','CLaunch.exe':'🖥️','OpenCode':'💻','OpenCode.exe':'💻','Taskmgr':'📊'};
-function friendlyName(a){if(APP_MAP[a])return APP_MAP[a];var b=a.replace(/\.exe$/i,'');return APP_MAP[b]||b}
+function friendlyName(a){
+  if(APP_MAP[a])return APP_MAP[a];
+  var b=String(a||'').replace(/\.exe$/i,'');
+  if(APP_MAP[b])return APP_MAP[b];
+  if(['interactionrhythm','typetracker'].indexOf(b.toLowerCase())>=0)return '交互节律';
+  return b;
+}
 function appSubName(a){var n=friendlyName(a);return n==='交互节律'?n:a}
 function appIcon(a){if(APP_ICONS[a])return APP_ICONS[a];var b=a.replace(/\.exe$/i,'');return APP_ICONS[b]||'📱'}
 function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function tipAttr(s){return esc(s).replace(/\n/g,'&#10;')}
 function iconHtml(a){
   var fallback=esc(appIcon(a.app));
-  if(/^(TypeTracker|InteractionRhythm)(\.exe)?$/i.test(a.app)||a.app==='交互节律'){
-    return '<span class="app-icon">'+fallback+'</span>';
-  }
   if(a.path){
     return '<span class="app-icon" data-fallback="'+fallback+'"><img src="/api/icon?path='+encodeURIComponent(a.path)+'" alt="" loading="eager" decoding="async" onerror="this.parentNode.textContent=this.parentNode.dataset.fallback"></span>';
   }
@@ -557,13 +602,24 @@ function detailIconHtml(d){
 }
 
 /* ── Modal ─────────────────────── */
-function showModal(title,html){
+var modalReturnTo=null;
+function showModal(title,html,variant,options){
+  options=options||{};
+  if(Object.prototype.hasOwnProperty.call(options,'returnTo'))modalReturnTo=options.returnTo;
   document.getElementById('modal-title').textContent=title;
   document.getElementById('modal-body').innerHTML=html;
+  var card=document.getElementById('modal-card');
+  if(card)card.className='modal-card'+(variant?' '+variant:'');
   document.getElementById('modal').hidden=false;
   document.body.style.overflow = 'hidden'; // 防止背景滚动
 }
 function closeModal(){
+  var next=modalReturnTo;
+  modalReturnTo=null;
+  if(next==='settings'){
+    openSettings();
+    return;
+  }
   document.getElementById('modal').hidden=true;
   document.body.style.overflow = '';
 }
@@ -620,6 +676,68 @@ function openExport(){
     '</div>'
   );
 }
+var SETTINGS_STATE={auto_start:false,background_start:false,silent_start:false};
+function settingsToggle(key){
+  var on=!!SETTINGS_STATE[key];
+  return '<button class="switch '+(on?'on':'')+'" onclick="toggleSetting(&quot;'+key+'&quot;)" aria-label="'+(on?'关闭':'开启')+'"></button>';
+}
+function renderSettings(settings){
+  SETTINGS_STATE=Object.assign({auto_start:false,background_start:false,silent_start:false},settings||{});
+  SETTINGS_STATE.silent_start=!!(SETTINGS_STATE.silent_start||SETTINGS_STATE.background_start);
+  showModal('设置',
+    '<div class="settings-panel">'+
+      '<div class="settings-section">'+
+        '<h3>启动方式</h3>'+
+        '<div class="setting-row"><div class="setting-copy"><b>开机自启</b><span>登录 Windows 后自动运行。</span></div>'+settingsToggle('auto_start')+'</div>'+
+        '<div class="setting-row"><div class="setting-copy"><b>静默启动</b><span>自启时只进托盘，不弹主窗口。</span></div>'+settingsToggle('silent_start')+'</div>'+
+      '</div>'+
+      '<div class="settings-section">'+
+        '<h3>数据与版本</h3>'+
+        '<div class="settings-actions">'+
+          '<button class="settings-action" onclick="openExport()"><b>导出数据</b><span>最近 30 天记录。</span></button>'+
+          '<button class="settings-action" onclick="openUpdate()"><b>检查更新</b><span>发现新版后安装。</span></button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="settings-section">'+
+        '<h3>外观</h3>'+
+        '<div class="theme-segment">'+
+          '<button class="theme-choice '+(getTheme()==='light'?'active':'')+'" data-theme-choice="light" onclick="setThemeChoice(&quot;light&quot;)">浅色</button>'+
+          '<button class="theme-choice '+(getTheme()==='dark'?'active':'')+'" data-theme-choice="dark" onclick="setThemeChoice(&quot;dark&quot;)">深色</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>',
+    'settings-modal',
+    {returnTo:null}
+  );
+}
+async function openSettings(){
+  showModal('设置','<div class="modal-loading">正在读取设置…</div>');
+  try{
+    var r=await fetch('/api/settings');
+    var d=await r.json();
+    if(!d.ok)throw new Error(d.error||'设置读取失败');
+    renderSettings(d.settings||{});
+  }catch(e){
+    showModal('设置','<div class="modal-error">'+esc(e.message||'设置读取失败')+'</div>');
+  }
+}
+async function toggleSetting(key){
+  var patch={};
+  patch[key]=!SETTINGS_STATE[key];
+  if(key==='silent_start')patch.background_start=patch[key];
+  try{
+    var r=await fetch('/api/settings',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(patch)
+    });
+    var d=await r.json();
+    if(!d.ok)throw new Error(d.error||'设置保存失败');
+    renderSettings(d.settings||{});
+  }catch(e){
+    showModal('设置','<div class="modal-error">'+esc(e.message||'设置保存失败')+'</div>');
+  }
+}
 var lastUpdateManifest=null;
 function renderUpdateNotes(notes){
   if(!notes||!notes.length)return '<p class="muted">这次更新没有额外说明。</p>';
@@ -628,7 +746,7 @@ function renderUpdateNotes(notes){
   }).join('')+'</div>';
 }
 async function openUpdate(){
-  showModal('检查更新','<div class="modal-loading">正在检查新版本…</div>');
+  showModal('检查更新','<div class="modal-loading">正在检查新版本…</div>','update-modal',{returnTo:'settings'});
   try{
     var r=await fetch('/api/update/check');
     var d=await r.json();
@@ -644,7 +762,8 @@ async function openUpdate(){
           '<div class="metric"><span>当前版本</span><b>'+esc(m.current||'—')+'</b></div>'+
           '<div class="metric"><span>最新版本</span><b>'+esc(m.latest||'—')+'</b></div>'+
         '</div>'+
-        '<p class="muted">'+esc(noUpdateText)+'</p>'
+        '<p class="muted">'+esc(noUpdateText)+'</p>',
+        'update-modal'
       );
       return;
     }
@@ -654,20 +773,21 @@ async function openUpdate(){
         '<div class="metric"><span>当前版本</span><b>'+esc(m.current||'—')+'</b></div>'+
         '<div class="metric"><span>新版本</span><b>'+esc(m.latest||'—')+'</b></div>'+
       '</div>'+
-      '<p class="muted">点击安装后，交互节律会在后台下载更新包，随后自动关闭、替换文件并重新打开。'+esc(size)+'</p>'+
+      '<p class="muted">新版已准备好。安装时应用会短暂关闭，完成后自动重新打开。'+esc(size)+'</p>'+
       '<div class="detail-section"><h3>更新内容</h3>'+renderUpdateNotes(m.notes||[])+'</div>'+
       '<div class="action-grid">'+
         '<a class="action-card" href="#" onclick="installUpdate();return false"><b>下载并安装</b><span>安装过程中应用会短暂关闭。</span></a>'+
         '<a class="action-card" href="#" onclick="closeModal();return false"><b>稍后再说</b><span>保留当前版本继续使用。</span></a>'+
-      '</div>'
+      '</div>',
+      'update-modal'
     );
   }catch(e){
-    showModal('检查更新','<div class="modal-error">'+esc(e.message||'更新检查失败')+'</div>');
+    showModal('检查更新','<div class="modal-error">'+esc(e.message||'更新检查失败')+'</div>','update-modal');
   }
 }
 async function installUpdate(){
   if(!lastUpdateManifest)return;
-  showModal('安装更新','<div class="modal-loading">正在准备下载和安装，应用稍后会自动关闭…</div>');
+  showModal('安装更新','<div class="modal-loading">正在准备下载和安装，应用稍后会自动关闭…</div>','update-modal',{returnTo:null});
   try{
     var r=await fetch('/api/update/install',{
       method:'POST',
@@ -676,13 +796,14 @@ async function installUpdate(){
     });
     var d=await r.json();
     if(!d.ok)throw new Error(d.error||'更新安装失败');
-    showModal('安装更新','<div class="modal-loading">'+esc(d.message||'正在安装更新，应用稍后会自动重启')+'</div>');
+    showModal('安装更新','<div class="modal-loading">'+esc(d.message||'正在安装更新，应用稍后会自动重启')+'</div>','update-modal',{returnTo:null});
   }catch(e){
-    showModal('安装更新','<div class="modal-error">'+esc(e.message||'更新安装失败')+'</div>');
+    showModal('安装更新','<div class="modal-error">'+esc(e.message||'更新安装失败')+'</div>','update-modal',{returnTo:null});
   }
 }
 function renderAppDetail(d){
   var peak=d.peak_hour===null||d.peak_hour===undefined?'—':fmtHour(d.peak_hour);
+  var density=d.response_density?Math.round(d.response_density)+'/分':'—';
   var titles=d.top_titles&&d.top_titles.length?'<div class="detail-section"><h3>窗口标题</h3><div class="data-table">'+d.top_titles.map(function(t){
     return '<div class="data-row"><b>'+fmtTime(t.seconds)+'</b><em title="'+esc(t.title)+'">'+esc(t.title)+'</em></div>';
   }).join('')+'</div></div>':'';
@@ -693,6 +814,10 @@ function renderAppDetail(d){
       '<div class="metric"><span>今天</span><b>'+fmtTime(d.today_seconds)+'</b></div>'+
       '<div class="metric"><span>次数</span><b>'+fmtNum(d.session_count)+'</b></div>'+
       '<div class="metric"><span>高峰</span><b>'+peak+'</b></div>'+
+      '<div class="metric"><span>响应</span><b>'+fmtNum(d.responses||0)+'</b></div>'+
+      '<div class="metric"><span>键盘</span><b>'+fmtNum(d.keyboard||0)+'</b></div>'+
+      '<div class="metric"><span>鼠标</span><b>'+fmtNum(d.mouse||0)+'</b></div>'+
+      '<div class="metric"><span>密度</span><b>'+density+'</b></div>'+
     '</div>'+
     '<div class="detail-section"><h3>应用热力图</h3>'+renderDetailHeat(d.heatmap||[])+'</div>'+
     '<div class="detail-section"><h3>小时分布</h3>'+renderHourBars(d.hourly||[])+'</div>'+
@@ -710,32 +835,24 @@ async function openAppDetail(app){
   }
 }
 function renderInsights(d){
-  var s=d.summary||{},charts=d.charts||{};
-  var top=s.top_app&&s.top_app.app?s.top_app.app:'—';
+  var findings=d.findings&&d.findings.length?d.findings:(d.judgments||[]);
+  var suggestions=d.suggestions&&d.suggestions.length?d.suggestions:['记录还不够多，先正常使用一段时间，再回来查看节律建议。'];
   showModal('节律助手',
-    '<div class="insight-list"><div class="insight-item"><b>结论</b><br>'+esc(d.conclusion||'当前数据还不足以形成稳定判断。')+'</div></div>'+
-    '<p class="muted" style="margin-top:10px">接口：'+esc(d.interface||'GET /api/insights?days=7')+'。模型：'+esc(d.model||'本地规则分析')+'。'+esc(d.model_note||'没有调用外部 AI 模型，记录不会离开本机。')+'</p>'+
-    '<div class="metric-grid" style="margin-top:9px">'+
-      '<div class="metric"><span>日均响应</span><b>'+fmtNum(s.average_daily_responses||0)+'</b></div>'+
-      '<div class="metric"><span>日均活跃</span><b>'+fmtTime(s.average_daily_seconds||0)+'</b></div>'+
-      '<div class="metric"><span>高峰小时</span><b>'+(s.peak_hour===null||s.peak_hour===undefined?'—':fmtHour(s.peak_hour))+'</b></div>'+
-      '<div class="metric"><span>集中应用</span><b title="'+esc(friendlyName(top))+'">'+esc(friendlyName(top))+'</b></div>'+
-    '</div>'+
-    '<div class="detail-section"><h3>也许做了什么</h3><div class="insight-list">'+((d.recall&&d.recall.length)?d.recall.map(function(x){return '<div class="insight-item">'+esc(x)+'</div>'}).join(''):'<div class="insight-item">记录还不够集中，暂时无法从时间段和应用组合里帮你回忆具体活动。</div>')+'</div></div>'+
-    '<div class="detail-section"><h3>跟上次相比</h3><div class="insight-list"><div class="insight-item">'+esc(d.comparison||'还没有上次分析可以比较。')+'</div></div></div>'+
-    '<div class="detail-section"><h3>判断</h3><div class="insight-list">'+(d.judgments||[]).map(function(x){return '<div class="insight-item">'+esc(x)+'</div>'}).join('')+'</div></div>'+
-    '<div class="detail-section"><h3>健康建议</h3><div class="insight-list">'+(d.suggestions||[]).map(function(x){return '<div class="insight-item">'+esc(x)+'</div>'}).join('')+'</div></div>'+
-    '<div class="detail-section"><h3>每日响应</h3>'+renderDayBars(charts.daily||[])+'</div>'+
-    '<div class="detail-section"><h3>小时分布</h3>'+renderHourBars(charts.hourly||[])+'</div>'
+    '<div class="insight-list"><div class="insight-item lead">'+esc(d.conclusion||'当前记录还不足以形成稳定结论。')+'</div></div>'+
+    '<div class="insight-section"><h3>重点发现</h3><div class="insight-list">'+(findings.length?findings.slice(0,3).map(function(x){return '<div class="insight-item">'+esc(x)+'</div>'}).join(''):'<div class="insight-item">记录还不够集中，暂时无法选出稳定线索。</div>')+'</div></div>'+
+    '<div class="insight-section"><h3>建议</h3><div class="insight-list">'+suggestions.slice(0,4).map(function(x){return '<div class="insight-item">'+esc(x)+'</div>'}).join('')+'</div></div>'+
+    '<div class="insight-foot">本地规则分析，不上传记录。只根据时长、响应次数和前台应用选择最值得看的线索。</div>',
+    'insight-modal',
+    {returnTo:null}
   );
 }
 async function openInsights(){
-  showModal('节律助手','<div class="modal-loading">正在分析最近记录…</div>');
+  showModal('节律助手','<div class="modal-loading">正在分析最近记录…</div>','insight-modal',{returnTo:null});
   try{
     var r=await fetch('/api/insights?days=7');
     renderInsights(await r.json());
   }catch(e){
-    showModal('节律助手','<div class="modal-error">分析失败</div>');
+    showModal('节律助手','<div class="modal-error">分析失败</div>','insight-modal',{returnTo:null});
   }
 }
 
@@ -822,9 +939,9 @@ async function loadHeatmap(){
 
 /* ── App bars ──────────────────── */
 var lastAppsLayoutSignature='';
-async function loadApps(){
+function renderApps(apps){
   try{
-    var r=await fetch('/api/apps'),j=await r.json(),apps=j.apps||[];
+    apps=apps||[];
     if(!apps.length){document.getElementById('app-list').innerHTML='<div class="empty">暂无数据</div>';document.getElementById('app-count').textContent='';return;}
     var mx=apps[0].seconds,total=apps.reduce(function(a,b){return a+b.seconds},0);
     var topApps=apps.slice(0,10);
@@ -849,6 +966,12 @@ async function loadApps(){
       if(pctEl)pctEl.textContent=share.toFixed(0)+'%';
       if(timeEl)timeEl.textContent=fmtTime(a.seconds);
     });
+  }catch(e){}
+}
+async function loadApps(){
+  try{
+    var r=await fetch('/api/apps'),j=await r.json();
+    renderApps(j.apps||[]);
   }catch(e){}
 }
 
@@ -888,13 +1011,25 @@ document.querySelector('.wrap')?.addEventListener('touchend', async () => {
 /* ── 数据加载 ─────────────────── */
 async function loadData() {
   try {
-    var r = await fetch('/api/today');
-    var d = await r.json();
-    render(d);
-    await loadHeatmap();
-    await loadApps();
+    setOfflineMessage(false);
+    var todayReq = fetch('/api/today').then(function(r){return r.json()});
+    var heatReq = fetch('/api/heatmap?days=6').then(function(r){return r.json()});
+    var appsReq = fetch('/api/apps').then(function(r){return r.json()});
+    var results = await Promise.all([todayReq, heatReq, appsReq]);
+    render(results[0]);
+    heatmapDays = results[1].data || [];
+    renderHeatmap();
+    var appList = results[2].apps || [];
+    renderApps(appList);
   } catch(e) {
     console.error('数据加载失败:', e);
+    setOfflineMessage(true,'正在连接交互节律后台…');
+    if(!dataRetryTimer){
+      dataRetryTimer=setTimeout(function(){
+        dataRetryTimer=null;
+        loadData();
+      },1200);
+    }
   }
 }
 
@@ -905,19 +1040,21 @@ async function init(){
     
     // 定时刷新（降低频率以节省电量）
     setInterval(async function(){
+      if(document.hidden)return;
       try{
         var r=await fetch('/api/today');
         render(await r.json());
       }catch(e){}
-    }, 2000);
+    }, 3500);
     
     setInterval(function(){
+      if(document.hidden)return;
       loadHeatmap();
       loadApps();
-    }, 10000);
+    }, 15000);
     
   }catch(e){
-    document.querySelector('.wrap').innerHTML='<div style="text-align:center;color:var(--rose);padding:60px;font-size:14px">连接失败 — 请确认交互节律已启动</div>';
+    setOfflineMessage(true,'正在连接交互节律后台…');
   }
 }
 

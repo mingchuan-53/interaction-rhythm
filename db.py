@@ -1,6 +1,8 @@
 """SQLite 数据库层"""
 import sqlite3
 import threading
+import random
+from collections import Counter
 from pathlib import Path
 from datetime import datetime, time, timedelta
 
@@ -28,6 +30,14 @@ CREATE TABLE IF NOT EXISTS app_paths (
     path TEXT NOT NULL,
     updated TEXT NOT NULL DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS app_interactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT NOT NULL,
+    app TEXT NOT NULL,
+    path TEXT NOT NULL DEFAULT '',
+    keyboard INTEGER NOT NULL DEFAULT 0,
+    mouse INTEGER NOT NULL DEFAULT 0
+);
 CREATE TABLE IF NOT EXISTS insight_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     generated_at TEXT NOT NULL,
@@ -41,6 +51,8 @@ CREATE INDEX IF NOT EXISTS idx_key_ts ON keystrokes(ts);
 CREATE INDEX IF NOT EXISTS idx_mouse_ts ON mouse_events(ts);
 CREATE INDEX IF NOT EXISTS idx_app_start ON app_usage(start);
 CREATE INDEX IF NOT EXISTS idx_app_name ON app_usage(app);
+CREATE INDEX IF NOT EXISTS idx_interact_ts ON app_interactions(ts);
+CREATE INDEX IF NOT EXISTS idx_interact_app ON app_interactions(app);
 CREATE INDEX IF NOT EXISTS idx_insight_generated ON insight_history(generated_at);
 """
 
@@ -78,18 +90,44 @@ class DB:
             self._local.conn.close()
             del self._local.conn
 
-    def add_keystrokes(self, count: int):
-        self._conn.execute(
-            "INSERT INTO keystrokes(ts,count) VALUES(?,?)",
-            (datetime.now().isoformat(timespec="seconds"), count),
-        )
+    def checkpoint(self):
+        self._conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         self._conn.commit()
 
-    def add_mouse_events(self, count: int):
+    def _remember_app_path(self, app: str, path: str):
+        if not app or not path:
+            return
+        self._conn.execute(
+            "INSERT OR REPLACE INTO app_paths(app,path,updated) VALUES(?,?,?)",
+            (app, path, datetime.now().isoformat(timespec="seconds")),
+        )
+
+    def _add_app_interaction(self, ts: str, app: str, path: str = "", keyboard: int = 0, mouse: int = 0):
+        app = (app or "").strip()
+        if not app or app == "unknown" or (keyboard <= 0 and mouse <= 0):
+            return
+        self._conn.execute(
+            "INSERT INTO app_interactions(ts,app,path,keyboard,mouse) VALUES(?,?,?,?,?)",
+            (ts, app, path or "", max(0, int(keyboard or 0)), max(0, int(mouse or 0))),
+        )
+        self._remember_app_path(app, path or "")
+
+    def add_keystrokes(self, count: int, app: str = "", path: str = ""):
+        ts = datetime.now().isoformat(timespec="seconds")
+        self._conn.execute(
+            "INSERT INTO keystrokes(ts,count) VALUES(?,?)",
+            (ts, count),
+        )
+        self._add_app_interaction(ts, app, path, keyboard=count)
+        self._conn.commit()
+
+    def add_mouse_events(self, count: int, app: str = "", path: str = ""):
+        ts = datetime.now().isoformat(timespec="seconds")
         self._conn.execute(
             "INSERT INTO mouse_events(ts,count) VALUES(?,?)",
-            (datetime.now().isoformat(timespec="seconds"), count),
+            (ts, count),
         )
+        self._add_app_interaction(ts, app, path, mouse=count)
         self._conn.commit()
 
     def add_session(self, app: str, title: str, start: str, end: str, path: str = ""):
@@ -98,10 +136,7 @@ class DB:
             (app, title, start, end, path or ""),
         )
         if app and path:
-            self._conn.execute(
-                "INSERT OR REPLACE INTO app_paths(app,path,updated) VALUES(?,?,?)",
-                (app, path, datetime.now().isoformat(timespec="seconds")),
-            )
+            self._remember_app_path(app, path)
         self._conn.commit()
 
     def remember_app_paths(self, paths: dict[str, str]):
@@ -306,6 +341,33 @@ class DB:
             {"title": title, "seconds": round(seconds)}
             for title, seconds in sorted(titles.items(), key=lambda item: item[1], reverse=True)[:5]
         ]
+        interaction_rows = self._conn.execute(
+            "SELECT substr(ts,1,10) AS d, CAST(substr(ts,12,2) AS INTEGER) AS h, "
+            "  SUM(keyboard), SUM(mouse) "
+            "FROM app_interactions "
+            "WHERE app=? AND ts>=? AND ts<=? "
+            "GROUP BY d, h ORDER BY d, h",
+            (app, start_iso, end_iso),
+        ).fetchall()
+        interaction_daily = {d: {"keyboard": 0, "mouse": 0} for d in dates}
+        interaction_heatmap = {d: [{"keyboard": 0, "mouse": 0} for _ in range(24)] for d in dates}
+        interaction_hourly = [{"keyboard": 0, "mouse": 0} for _ in range(24)]
+        keyboard_total = 0
+        mouse_total = 0
+        for d, h, keys, clicks in interaction_rows:
+            if d not in interaction_daily or h is None or h < 0 or h > 23:
+                continue
+            keys = int(keys or 0)
+            clicks = int(clicks or 0)
+            keyboard_total += keys
+            mouse_total += clicks
+            interaction_daily[d]["keyboard"] += keys
+            interaction_daily[d]["mouse"] += clicks
+            interaction_heatmap[d][h]["keyboard"] += keys
+            interaction_heatmap[d][h]["mouse"] += clicks
+            interaction_hourly[h]["keyboard"] += keys
+            interaction_hourly[h]["mouse"] += clicks
+        response_total = keyboard_total + mouse_total
 
         return {
             "app": app,
@@ -320,11 +382,48 @@ class DB:
             "longest_session_seconds": longest,
             "active_hours": sum(1 for value in hourly if value > 0),
             "peak_hour": peak_hour,
+            "keyboard": keyboard_total,
+            "mouse": mouse_total,
+            "responses": response_total,
+            "response_density": round(response_total / max(1, total_seconds / 60), 2) if total_seconds else 0,
+            "interaction_source": "direct" if response_total else "duration_only",
             "first_seen": sessions[0]["start"] if sessions else "",
             "last_seen": sessions[-1]["end"] if sessions else "",
             "daily": [{"date": d, "seconds": round(daily[d])} for d in dates],
             "hourly": [round(v) for v in hourly],
             "heatmap": [{"date": d, "hourly": [round(v) for v in heatmap[d]]} for d in dates],
+            "interaction_daily": [
+                {
+                    "date": d,
+                    "keyboard": interaction_daily[d]["keyboard"],
+                    "mouse": interaction_daily[d]["mouse"],
+                    "responses": interaction_daily[d]["keyboard"] + interaction_daily[d]["mouse"],
+                }
+                for d in dates
+            ],
+            "interaction_hourly": [
+                {
+                    "hour": h,
+                    "keyboard": row["keyboard"],
+                    "mouse": row["mouse"],
+                    "responses": row["keyboard"] + row["mouse"],
+                }
+                for h, row in enumerate(interaction_hourly)
+            ],
+            "interaction_heatmap": [
+                {
+                    "date": d,
+                    "hourly": [
+                        {
+                            "keyboard": cell["keyboard"],
+                            "mouse": cell["mouse"],
+                            "responses": cell["keyboard"] + cell["mouse"],
+                        }
+                        for cell in interaction_heatmap[d]
+                    ],
+                }
+                for d in dates
+            ],
             "sessions": list(reversed(sessions[-30:])),
             "top_titles": top_titles,
         }
@@ -384,6 +483,25 @@ class DB:
                 "seconds": round((clipped_end - clipped_start).total_seconds()),
             })
 
+        interaction_rows = self._conn.execute(
+            "SELECT app, path, ts, keyboard, mouse "
+            "FROM app_interactions "
+            "WHERE ts>=? AND ts<=? "
+            "ORDER BY ts DESC",
+            (start_iso, end_iso),
+        ).fetchall()
+        interactions = [
+            {
+                "app": app,
+                "path": path or "",
+                "ts": ts,
+                "keyboard": int(keyboard or 0),
+                "mouse": int(mouse or 0),
+                "responses": int(keyboard or 0) + int(mouse or 0),
+            }
+            for app, path, ts, keyboard, mouse in interaction_rows
+        ]
+
         return {
             "generated_at": datetime.now().isoformat(timespec="seconds"),
             "range": {"start": dates[0], "end": dates[-1], "days": len(dates)},
@@ -392,6 +510,7 @@ class DB:
             "heatmap": heatmap,
             "applications": applications,
             "sessions": sessions,
+            "interactions": interactions,
         }
 
     def _previous_insight(self) -> dict | None:
@@ -412,7 +531,7 @@ class DB:
         }
 
     def _save_insight(self, result: dict):
-        summary = "；".join((result.get("judgments") or [])[:2])
+        summary = "；".join((result.get("findings") or result.get("judgments") or [])[:2])
         top_app = ((result.get("summary") or {}).get("top_app") or {}).get("app", "")
         self._conn.execute(
             "INSERT INTO insight_history(generated_at,responses,active_seconds,top_app,peak_hour,summary) "
@@ -463,9 +582,21 @@ class DB:
     def _app_display_name(self, app: str) -> str:
         name = (app or "").strip()
         stem = name[:-4] if name.lower().endswith(".exe") else name
-        if stem.lower() in {"interactionrhythm", "typetracker"} or name == "交互节律":
+        lower = stem.lower()
+        if lower in {"interactionrhythm", "typetracker"} or name == "交互节律":
             return "交互节律"
-        return name
+        aliases = {
+            "code": "VS Code",
+            "codex": "Codex",
+            "chrome": "Chrome",
+            "msedge": "Edge",
+            "explorer": "文件管理器",
+            "wechat": "微信",
+            "obsidian": "Obsidian",
+            "python": "Python",
+            "pythonw": "Python",
+        }
+        return aliases.get(lower, stem or name)
 
     def _hour_range_text(self, hour: int) -> str:
         return f"{hour:02d}:00-{(hour + 1) % 24:02d}:00"
@@ -506,17 +637,150 @@ class DB:
         lines = []
         for total, date, hour, keyboard, mouse in slots[:limit]:
             apps = self._apps_during_hour(sessions, date, hour)
-            app_text = "，前台应用主要是 " + "、".join(apps) if apps else ""
+            app_text = "，主要应用：" + "、".join(apps) if apps else ""
             if keyboard > mouse * 1.5:
-                action = "也许是在写作、编码、整理笔记或进行较连续的输入。"
+                action = "更像连续输入。"
             elif mouse > keyboard * 1.5:
-                action = "也许是在浏览资料、筛选页面、整理文件或处理零散操作。"
+                action = "更像浏览、筛选或整理。"
             else:
-                action = "也许是在输入和浏览之间来回推进。"
+                action = "更像边输入边浏览。"
             lines.append(
-                f"{date} {self._hour_range_text(hour)} 响应较集中：键盘 {keyboard} 次，鼠标 {mouse} 次{app_text}，{action}"
+                f"{date} {self._hour_range_text(hour)} 响应集中{app_text}，{action}"
             )
         return lines
+
+    def _fresh_suggestions(self, base: list[str], limit: int = 4) -> list[str]:
+        pool = list(dict.fromkeys(base))
+        random.shuffle(pool)
+        return pool[:limit]
+
+    def _interaction_totals(self, start_iso: str, end_iso: str) -> dict[str, dict]:
+        rows = self._conn.execute(
+            "SELECT ai.app, SUM(ai.keyboard), SUM(ai.mouse), "
+            "  COALESCE(NULLIF(MAX(ai.path), ''), MAX(ap.path), '') AS path "
+            "FROM app_interactions ai LEFT JOIN app_paths ap ON ap.app=ai.app "
+            "WHERE ai.ts>=? AND ai.ts<=? "
+            "GROUP BY ai.app",
+            (start_iso, end_iso),
+        ).fetchall()
+        totals = {}
+        for app, keyboard, mouse, path in rows:
+            keyboard = int(keyboard or 0)
+            mouse = int(mouse or 0)
+            totals[app] = {
+                "app": app,
+                "path": path or "",
+                "keyboard": keyboard,
+                "mouse": mouse,
+                "responses": keyboard + mouse,
+            }
+        return totals
+
+    def _app_strength_findings(
+        self,
+        apps: list[dict],
+        sessions: list[dict],
+        interactions: dict[str, dict],
+        total_seconds: int,
+    ) -> tuple[list[str], list[str], list[dict]]:
+        session_counts = Counter(session.get("app") or "" for session in sessions)
+        total_responses = sum(row.get("responses", 0) for row in interactions.values())
+        rows = []
+        known_apps = {app.get("app") for app in apps if app.get("app")}
+        ordered_names = [app.get("app") for app in apps if app.get("app")]
+        for app in sorted(set(interactions) - known_apps):
+            ordered_names.append(app)
+
+        for name in ordered_names:
+            duration = next((int(app.get("seconds") or 0) for app in apps if app.get("app") == name), 0)
+            row = interactions.get(name, {})
+            keyboard = int(row.get("keyboard") or 0)
+            mouse = int(row.get("mouse") or 0)
+            responses = keyboard + mouse
+            minutes = max(1, duration / 60) if duration else 1
+            duration_share = duration / total_seconds if total_seconds else 0
+            response_share = responses / total_responses if total_responses else 0
+            density = responses / minutes if duration else 0
+            rows.append({
+                "app": name,
+                "name": self._app_display_name(name),
+                "seconds": duration,
+                "sessions": int(session_counts.get(name, 0)),
+                "keyboard": keyboard,
+                "mouse": mouse,
+                "responses": responses,
+                "duration_share": round(duration_share, 4),
+                "response_share": round(response_share, 4),
+                "response_density": round(density, 2),
+            })
+
+        candidates = []
+        advice = []
+        for item in rows:
+            name = item["name"]
+            seconds = item["seconds"]
+            sessions_count = item["sessions"]
+            keyboard = item["keyboard"]
+            mouse = item["mouse"]
+            responses = item["responses"]
+            duration_share = item["duration_share"]
+            response_share = item["response_share"]
+            density = item["response_density"]
+
+            if responses and response_share - duration_share >= 0.12:
+                candidates.append((
+                    90 + int((response_share - duration_share) * 100),
+                    f"{name} 的交互占比高于时长占比，更像今天需要主动操作的应用。",
+                ))
+                advice.append(f"把 {name} 相关任务集中到同一段时间处理，减少来回切换。")
+            if seconds >= 20 * 60 and duration_share - response_share >= 0.15:
+                candidates.append((
+                    82 + int((duration_share - response_share) * 100),
+                    f"{name} 停留较长，但键鼠响应不高，更像阅读、观看、等待或资料浏览。",
+                ))
+                advice.append(f"如果 {name} 是阅读或观看场景，可以给自己设一个明确的收尾点。")
+            if sessions_count >= 6 and seconds < 90 * 60:
+                candidates.append((
+                    78 + sessions_count,
+                    f"{name} 回返次数偏多，可能经常插入到其它任务之间。",
+                ))
+                advice.append(f"把 {name} 的查看频率收成几次固定检查，专注时间会更完整。")
+            if keyboard >= max(300, mouse * 1.6):
+                candidates.append((
+                    75 + min(20, keyboard // 300),
+                    f"{name} 的键盘响应更突出，更像输入、搜索、整理或开发现场。",
+                ))
+                advice.append("键盘响应连续变高时，手指和前臂需要短暂停顿。")
+            if mouse >= max(300, keyboard * 1.6):
+                candidates.append((
+                    75 + min(20, mouse // 300),
+                    f"{name} 的鼠标响应更突出，更像浏览、筛选、调整或文件整理。",
+                ))
+                advice.append("鼠标响应连续变高时，检查手腕位置，能用快捷键就少拖动。")
+            if responses >= 600 and density >= 80:
+                candidates.append((
+                    72 + min(20, int(density // 20)),
+                    f"{name} 单位时间响应密度偏高，说明这段使用不只是挂着，而是在密集操作。",
+                ))
+                advice.append(f"{name} 高密度使用后，下一段最好安排低刺激任务或短休息。")
+
+        if rows and not candidates:
+            lead = max(rows, key=lambda item: (item["responses"], item["seconds"]))
+            if lead["responses"]:
+                candidates.append((60, f"{lead['name']} 是目前交互最明显的应用，可以继续观察它在不同时间段的变化。"))
+            elif lead["seconds"]:
+                candidates.append((55, f"{lead['name']} 是目前停留最明显的应用，新版会继续积累它的键鼠强度。"))
+
+        candidates.sort(key=lambda item: item[0], reverse=True)
+        findings = []
+        for _score, text in candidates:
+            if text not in findings:
+                findings.append(text)
+            if len(findings) >= 3:
+                break
+
+        rows.sort(key=lambda item: (item["responses"], item["seconds"]), reverse=True)
+        return findings, advice, rows[:6]
 
     def insights(self, days: int = 7) -> dict:
         data = self.export_data(days)
@@ -540,29 +804,45 @@ class DB:
         top_share = (top_app["seconds"] / total_seconds) if total_seconds else 0
         previous = self._previous_insight()
         recall = self._recall_lines(heatmap, sessions)
+        start, end, _dates = self._range(days)
+        interactions = self._interaction_totals(start.isoformat(timespec="seconds"), end.isoformat(timespec="seconds"))
+        app_findings, app_suggestions, app_strength = self._app_strength_findings(
+            apps, sessions, interactions, total_seconds
+        )
 
         if responses == 0 and total_seconds == 0:
-            conclusion = "结论：现在还没有足够的记录。节律助手只能确认记录通道已经准备好，暂时不能判断使用节律。"
-            judgments = [
+            conclusion = "现在还没有足够的记录。节律助手只能确认记录通道已经准备好。"
+            findings = [
                 "最近还没有记录到键盘、鼠标或应用使用数据。",
-                "现在只能确认记录通道已经准备好，暂时不能判断使用习惯。",
+                "先正常使用一段时间，再回来查看节律线索。",
             ]
-            suggestions = [
-                "先正常使用一段时间，再打开分析会更有意义。",
-                "如果你明明一直在使用电脑，检查一下应用是否在后台运行。",
-            ]
+            suggestions = self._fresh_suggestions([
+                "先正常使用半天，让热力图积累出时间块。",
+                "如果一直在使用电脑却没有记录，检查后台是否仍在运行。",
+                "第一次观察先看记录是否连续，不急着判断习惯。",
+                "等应用排行出现稳定名称后，再看具体活动线索。",
+                "如果开机自启已打开，明天的数据会更完整。",
+            ])
         elif responses < 500 or total_seconds < 20 * 60:
-            conclusion = "结论：当前数据偏少，也许只能作为记录是否正常的检查，不适合直接判断稳定习惯。"
-            judgments = [
-                "当前数据还偏少，只能看出一个大概方向，不能当成稳定习惯。",
+            conclusion = "当前数据偏少，更适合作为记录通道检查，不适合直接判断稳定习惯。"
+            findings = [
+                "当前数据只能看出大概方向，还不能当成稳定习惯。",
                 "等记录覆盖几个完整工作时段后，高峰时间和应用集中度会更准。",
             ]
             if peak_hour is not None:
-                judgments.append(f"目前少量记录里，响应主要出现在 {peak_hour:02d}:00 左右。")
-            suggestions = [
-                "先积累半天到一天的数据，再看分析结论。",
-                "现在可以先用它确认记录是否连续、应用名称是否正确。",
-            ]
+                findings.append(f"目前少量记录里，响应主要出现在 {peak_hour:02d}:00 左右。")
+            for text in app_findings:
+                if len(findings) >= 3:
+                    break
+                if text not in findings:
+                    findings.append(text)
+            suggestions = self._fresh_suggestions([
+                "先积累半天到一天的数据，再看趋势会更稳。",
+                "现在可以先确认记录是否连续、应用名称是否正确。",
+                "如果某个小时突然变深，可以回忆那一段是不是有集中任务。",
+                "数据还少时，健康建议先按轻量休息执行即可。",
+                "连续输入超过一小时后，给手腕和眼睛留 3 分钟缓冲。",
+            ])
         else:
             if keyboard > mouse * 1.5:
                 rhythm_type = "输入型"
@@ -578,39 +858,58 @@ class DB:
             else:
                 app_phrase = "应用分布比较分散"
             hour_phrase = f"高峰多在 {peak_hour:02d}:00 左右" if peak_hour is not None else "高峰时间还不明显"
-            conclusion = f"结论：最近 {data['range']['days']} 天呈现{rhythm_type}节律，{app_phrase}，{hour_phrase}。这些数据不能证明产出质量，但能帮助回忆电脑前的工作形态。"
-            judgments = []
+            conclusion = f"最近 {data['range']['days']} 天呈现{rhythm_type}节律，{app_phrase}，{hour_phrase}。"
+            context_findings = []
             if avg_seconds >= 8 * 3600:
-                judgments.append("最近每天盯屏幕的时间偏长，身体恢复的空间不够。")
+                context_findings.append("最近每天盯屏幕的时间偏长，身体恢复的空间不够。")
             elif avg_seconds >= 5 * 3600:
-                judgments.append("最近每天使用电脑的时间不低，最好把休息固定下来。")
+                context_findings.append("最近每天使用电脑的时间不低，最好把休息固定下来。")
             else:
-                judgments.append("最近总时长还可以，重点看有没有集中在某一两个小时里。")
+                context_findings.append("最近总时长还可以，重点看有没有集中在某一两个小时里。")
 
             if peak_hour is not None:
                 if peak_hour >= 22 or peak_hour <= 5:
-                    judgments.append(f"你的高峰在 {peak_hour:02d}:00 左右，说明夜间使用比较明显。")
+                    context_findings.append(f"高峰在 {peak_hour:02d}:00 左右，说明夜间使用比较明显。")
                 else:
-                    judgments.append(f"你的高峰在 {peak_hour:02d}:00 左右，这段时间更适合放重要工作。")
-            if top_app["app"]:
-                judgments.append(f"时间最集中的应用是 {self._app_display_name(top_app['app'])}，大约占 {round(top_share * 100)}%。")
-            if mouse > keyboard * 1.8 and mouse > 1000:
-                judgments.append("鼠标操作明显更多，手腕和肩颈更容易累。")
-            elif keyboard > mouse * 1.8 and keyboard > 1000:
-                judgments.append("键盘输入明显更多，手指和前臂更容易疲劳。")
+                    context_findings.append(f"高峰在 {peak_hour:02d}:00 左右，这段时间更适合放重要工作。")
+            findings = []
+            for text in app_findings:
+                if len(findings) >= 3:
+                    break
+                if text not in findings:
+                    findings.append(text)
+            for text in context_findings:
+                if len(findings) >= 3:
+                    break
+                if text not in findings:
+                    findings.append(text)
 
-            suggestions = [
+            suggestion_pool = [
                 "每用电脑 45-60 分钟，离开屏幕 3-5 分钟，看远处，转动肩颈。",
                 "把需要专注的事情放到高峰小时，零碎切换的事情放到低峰小时。",
+                "热力图连续变深时，下一小时主动安排一次短休息。",
+                "当天响应很多但应用分散时，先收束正在处理的应用，再继续做事。",
+                "把重复点击多的操作改成快捷键，减少手腕来回移动。",
+                "如果某个应用占比很高，结束前写一句“刚才完成了什么”，方便复盘。",
+                "键盘响应持续偏高时，手指、前臂和肩膀都需要短暂停顿。",
+                "鼠标响应持续偏高时，检查鼠标位置和手腕支撑是否舒服。",
             ]
             if avg_seconds >= 5 * 3600:
-                suggestions.append("每天留一段 20 分钟以上的不看屏幕时间，不要把休息切得太碎。")
+                suggestion_pool.append("每天留一段 20 分钟以上的不看屏幕时间，不要把休息切得太碎。")
             if peak_hour is not None and (peak_hour >= 22 or peak_hour <= 5):
-                suggestions.append("如果晚上还在高强度输入，睡前 30 分钟尽量收尾。")
+                suggestion_pool.append("如果晚上还在高强度输入，睡前 30 分钟尽量收尾。")
             if mouse > keyboard * 1.5 and mouse > 1000:
-                suggestions.append("鼠标用得多时，把最常用的动作换成快捷键，少让手腕来回移动。")
+                suggestion_pool.append("鼠标用得多时，把最常用的动作换成快捷键，少让手腕来回移动。")
+            suggestions = self._fresh_suggestions(app_suggestions + suggestion_pool, 4)
 
         comparison = self._comparison_text(previous, responses, avg_seconds, top_app, peak_hour)
+        if previous and comparison and responses >= 500 and total_seconds >= 20 * 60:
+            ordered = []
+            if findings:
+                ordered.append(findings[0])
+            ordered.append(comparison)
+            ordered.extend(findings[1:])
+            findings = list(dict.fromkeys(ordered))[:3]
         result = {
             "generated_at": datetime.now().isoformat(timespec="seconds"),
             "assistant": "节律助手",
@@ -636,9 +935,11 @@ class DB:
                 "top_app": top_app,
             },
             "recall": recall,
-            "judgments": judgments,
+            "findings": findings[:3],
+            "judgments": findings[:3],
             "comparison": comparison,
-            "suggestions": suggestions[:5],
+            "suggestions": suggestions[:4],
+            "app_strength": app_strength,
             "charts": {
                 "daily": daily,
                 "hourly": hourly,
@@ -705,6 +1006,7 @@ class DB:
         self._conn.execute("DELETE FROM keystrokes WHERE ts < ?", (cutoff,))
         self._conn.execute("DELETE FROM mouse_events WHERE ts < ?", (cutoff,))
         self._conn.execute("DELETE FROM app_usage WHERE start < ?", (cutoff,))
+        self._conn.execute("DELETE FROM app_interactions WHERE ts < ?", (cutoff,))
         if hourly_days and hourly_days > days:
             hourly_cutoff = (datetime.now() - timedelta(days=hourly_days)).strftime("%Y-%m-%d")
             self._conn.execute("DELETE FROM keystrokes WHERE substr(ts,1,10) < ?", (hourly_cutoff,))

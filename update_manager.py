@@ -211,11 +211,12 @@ function Log($m) {{ Add-Content -LiteralPath $Log -Value ("[{0}] {{1}}" -f (Get-
 try {{
   Log "update started"
   Start-Sleep -Milliseconds 1200
+  $ProcessNames = @("InteractionRhythm", "TypeTracker")
   $deadline = (Get-Date).AddSeconds(20)
-  while ((Get-Process -Name "InteractionRhythm" -ErrorAction SilentlyContinue) -and (Get-Date) -lt $deadline) {{
+  while ((Get-Process -Name $ProcessNames -ErrorAction SilentlyContinue) -and (Get-Date) -lt $deadline) {{
     Start-Sleep -Milliseconds 500
   }}
-  Get-Process -Name "InteractionRhythm" -ErrorAction SilentlyContinue | Stop-Process -Force
+  Get-Process -Name $ProcessNames -ErrorAction SilentlyContinue | Stop-Process -Force
 
   if (Test-Path $Backup) {{ Remove-Item -LiteralPath $Backup -Recurse -Force }}
   New-Item -Path $Backup -ItemType Directory -Force | Out-Null

@@ -4,11 +4,14 @@ import os
 import signal
 import threading
 from pathlib import Path
+from urllib.request import urlopen
 
-from config import PORT, APP_NAME, DB_RETENTION_DAYS, HOURLY_RETENTION_DAYS
+from config import PORT, APP_NAME, APP_MUTEX_NAME, DB_RETENTION_DAYS, HOURLY_RETENTION_DAYS
 from db import DB
-from monitor import Tracker
 from stats import StatsServer
+
+_JOB_HANDLE = None
+_INSTANCE_MUTEX_HANDLE = None
 
 
 def resource_path(relative: str) -> Path:
@@ -33,6 +36,14 @@ def data_path() -> Path:
 DB_PATH = data_path() / "tracker.db"
 
 
+def local_server_healthy(timeout: float = 0.12) -> bool:
+    try:
+        with urlopen(f"http://127.0.0.1:{PORT}/api/today", timeout=timeout) as response:
+            return 200 <= response.status < 300
+    except Exception:
+        return False
+
+
 def set_windows_app_id():
     """让 Windows 任务栏把进程归到交互节律，而不是 python.exe。"""
     if os.name != "nt":
@@ -44,18 +55,165 @@ def set_windows_app_id():
         pass
 
 
+def acquire_single_instance_lock() -> bool:
+    """Use a named Windows mutex so newer builds cannot run side by side."""
+    if os.name != "nt":
+        return True
+    try:
+        import ctypes
+        import ctypes.wintypes as wintypes
+
+        kernel32 = ctypes.windll.kernel32
+        kernel32.CreateMutexW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
+        kernel32.CreateMutexW.restype = wintypes.HANDLE
+        kernel32.GetLastError.restype = wintypes.DWORD
+        handle = kernel32.CreateMutexW(None, False, APP_MUTEX_NAME)
+        if not handle:
+            return True
+
+        global _INSTANCE_MUTEX_HANDLE
+        _INSTANCE_MUTEX_HANDLE = handle
+        return kernel32.GetLastError() != 183  # ERROR_ALREADY_EXISTS
+    except Exception:
+        return True
+
+
+def set_kill_children_on_exit():
+    """让 WebView2 子进程随主进程一起退出，避免后台残留一瞬间。"""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        import ctypes.wintypes as wintypes
+
+        class JOBOBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
+            _fields_ = [
+                ("PerProcessUserTimeLimit", ctypes.c_int64),
+                ("PerJobUserTimeLimit", ctypes.c_int64),
+                ("LimitFlags", wintypes.DWORD),
+                ("MinimumWorkingSetSize", ctypes.c_void_p),
+                ("MaximumWorkingSetSize", ctypes.c_void_p),
+                ("ActiveProcessLimit", wintypes.DWORD),
+                ("Affinity", ctypes.c_void_p),
+                ("PriorityClass", wintypes.DWORD),
+                ("SchedulingClass", wintypes.DWORD),
+            ]
+
+        class IO_COUNTERS(ctypes.Structure):
+            _fields_ = [
+                ("ReadOperationCount", ctypes.c_uint64),
+                ("WriteOperationCount", ctypes.c_uint64),
+                ("OtherOperationCount", ctypes.c_uint64),
+                ("ReadTransferCount", ctypes.c_uint64),
+                ("WriteTransferCount", ctypes.c_uint64),
+                ("OtherTransferCount", ctypes.c_uint64),
+            ]
+
+        class JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
+            _fields_ = [
+                ("BasicLimitInformation", JOBOBJECT_BASIC_LIMIT_INFORMATION),
+                ("IoInfo", IO_COUNTERS),
+                ("ProcessMemoryLimit", ctypes.c_void_p),
+                ("JobMemoryLimit", ctypes.c_void_p),
+                ("PeakProcessMemoryUsed", ctypes.c_void_p),
+                ("PeakJobMemoryUsed", ctypes.c_void_p),
+            ]
+
+        kernel32 = ctypes.windll.kernel32
+        kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+        kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+        kernel32.SetInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD]
+        kernel32.SetInformationJobObject.restype = wintypes.BOOL
+        kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+        kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+        kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+
+        info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
+        info.BasicLimitInformation.LimitFlags = 0x00002000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        job = kernel32.CreateJobObjectW(None, None)
+        if not job:
+            return
+        if not kernel32.SetInformationJobObject(job, 9, ctypes.byref(info), ctypes.sizeof(info)):
+            return
+        kernel32.AssignProcessToJobObject(job, kernel32.GetCurrentProcess())
+
+        global _JOB_HANDLE
+        _JOB_HANDLE = job
+    except Exception:
+        pass
+
+
+def restore_existing_window(retries: int = 0, delay: float = 0.2, require_server: bool = True) -> bool:
+    if os.name != "nt":
+        return False
+    import time
+    try:
+        from window import _find_hwnd, _restore_main_window
+        for attempt in range(max(0, retries) + 1):
+            hwnd = _find_hwnd(APP_NAME)
+            server_ok = local_server_healthy() if hwnd and require_server else True
+            if hwnd and server_ok:
+                _restore_main_window(hwnd)
+                return True
+            if attempt < retries:
+                time.sleep(delay)
+    except Exception:
+        pass
+    return False
+
+
 def main():
     set_windows_app_id()
+    background_start = any(arg in ("--background", "--hidden", "--tray") for arg in sys.argv[1:])
+    if not acquire_single_instance_lock():
+        if not background_start:
+            restore_existing_window(retries=10, delay=0.1, require_server=False)
+        return
+    if not background_start and restore_existing_window(retries=0, delay=0.05):
+        return
     print(f"[{APP_NAME}] 启动中...")
 
     db = DB(DB_PATH)
 
-    tracker = Tracker(db)
+    tracker = None
+    tracker_lock = threading.Lock()
     server = None
+
+    class TrackerFacade:
+        """托盘使用的轻量代理，避免托盘启动时顺手拉起全局监听器。"""
+
+        @property
+        def stats(self):
+            active = tracker
+            if active:
+                return active.stats
+            try:
+                return db.today_stats()
+            except Exception:
+                return {"keystrokes": 0, "mouse_events": 0, "total_seconds": 0}
+
+        def flush(self):
+            active = tracker
+            if active:
+                active.flush()
+
+    def ensure_tracker_started():
+        nonlocal tracker
+        if tracker:
+            return tracker
+        with tracker_lock:
+            if tracker:
+                return tracker
+            from monitor import Tracker
+            next_tracker = Tracker(db)
+            next_tracker.start()
+            tracker = next_tracker
+            return tracker
 
     def shutdown(*_):
         print(f"\n[{APP_NAME}] 关闭中...")
-        tracker.stop()
+        if tracker:
+            tracker.stop()
         if server:
             server.stop()
         print(f"[{APP_NAME}] 已退出")
@@ -64,7 +222,8 @@ def main():
     def exit_for_update():
         print(f"\n[{APP_NAME}] 准备安装更新...")
         try:
-            tracker.stop()
+            if tracker:
+                tracker.stop()
         except Exception:
             pass
         try:
@@ -74,15 +233,22 @@ def main():
             pass
         os._exit(0)
 
-    server = StatsServer(db, PORT, shutdown_callback=exit_for_update)
+    try:
+        server = StatsServer(db, PORT, shutdown_callback=exit_for_update)
+    except OSError:
+        if background_start or restore_existing_window(retries=10, delay=0.2):
+            return
+        raise
 
     server.start()
 
     def start_tracker_async():
         import time
-        time.sleep(0.2)
+        # 全局键鼠监听和前台窗口探测会让 WebView 启动期抖一下。
+        # 可见启动时等窗口、标题栏、托盘都稳定后再拉起记录器。
+        time.sleep(0.8 if background_start else 6.0)
         try:
-            tracker.start()
+            ensure_tracker_started()
         except Exception as e:
             print(f"[{APP_NAME}] 记录器启动失败: {e}")
 
@@ -90,9 +256,10 @@ def main():
 
     def cleanup_async():
         import time
-        time.sleep(3)
+        time.sleep(8)
         try:
             db.cleanup(DB_RETENTION_DAYS, HOURLY_RETENTION_DAYS)
+            db.checkpoint()
         except Exception as e:
             print(f"[{APP_NAME}] 历史数据清理跳过: {e}")
 
@@ -101,18 +268,25 @@ def main():
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
-    print(f"[{APP_NAME}] 已启动  http://localhost:{PORT}")
+    print(f"[{APP_NAME}] 已启动  http://127.0.0.1:{PORT}")
 
     # 启动系统托盘（后台加载，避免拖慢窗口显示）
     def start_tray_async():
         try:
             import time
-            time.sleep(1.2)
+            time.sleep(0.4 if background_start else 3.0)
             tray_error = data_path() / "tray-error.log"
             if tray_error.exists():
                 tray_error.unlink()
             from tray import create_tray
-            _, tray_start = create_tray(tracker, PORT)
+            def tray_shutdown():
+                try:
+                    if server:
+                        server.stop()
+                except Exception:
+                    pass
+
+            _, tray_start = create_tray(TrackerFacade(), PORT, shutdown_callback=tray_shutdown)
             tray_start()
         except Exception as e:
             print(f"[{APP_NAME}] 托盘启动失败: {e}")
@@ -127,22 +301,34 @@ def main():
     print(f"[{APP_NAME}] 系统托盘加载中")
 
     # 生成应用图标（用于任务栏、窗口和原生标题栏）
-    icon_path = data_path() / f"{APP_NAME}.ico"
+    frozen = getattr(sys, "frozen", False)
     title_icon_path = data_path() / "interaction-rhythm-title.png"
-    if not icon_path.exists() or icon_path.stat().st_size < 1024:
-        try:
-            from tray import make_ico
-            make_ico(str(icon_path))
-        except Exception as e:
-            print(f"[{APP_NAME}] 图标生成失败: {e}")
-            icon_path = None
-    if not title_icon_path.exists():
-        try:
-            from tray import make_icon
-            make_icon(96).save(title_icon_path, "PNG")
-        except Exception as e:
-            print(f"[{APP_NAME}] 标题栏图标生成失败: {e}")
+    if frozen:
+        icon_candidates = [
+            Path(sys.executable).with_suffix(".ico"),
+            Path(sys.executable).parent / "InteractionRhythm.ico",
+            data_path() / f"{APP_NAME}.ico",
+        ]
+        icon_path = next((path for path in icon_candidates if path.exists() and path.stat().st_size >= 1024), None)
+        if not title_icon_path.exists():
             title_icon_path = None
+    else:
+        bundled_icon = resource_path("app.ico")
+        icon_path = bundled_icon if bundled_icon.exists() else data_path() / f"{APP_NAME}.ico"
+        if not icon_path.exists() or icon_path.stat().st_size < 1024:
+            try:
+                from tray import make_ico
+                make_ico(str(icon_path))
+            except Exception as e:
+                print(f"[{APP_NAME}] 图标生成失败: {e}")
+                icon_path = None
+        if not title_icon_path.exists():
+            try:
+                from tray import make_icon
+                make_icon(96).save(title_icon_path, "PNG")
+            except Exception as e:
+                print(f"[{APP_NAME}] 标题栏图标生成失败: {e}")
+                title_icon_path = None
 
     # 主线程：原生桌面窗口（阻塞直到窗口关闭）
     try:
@@ -151,6 +337,7 @@ def main():
             PORT,
             icon_path=str(icon_path) if icon_path else None,
             title_icon_path=str(title_icon_path) if title_icon_path else None,
+            start_hidden=background_start,
         )
         window_start()  # 阻塞主线程
     except Exception as e:

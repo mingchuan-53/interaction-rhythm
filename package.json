@@ -1,8 +1,8 @@
 {
   "name": "interaction-rhythm",
-  "version": "1.2.0",
+  "version": "1.5.0",
   "description": "键盘、鼠标响应和应用使用节律观察器",
-  "private": true,
+  "private": false,
   "scripts": {
     "start": "python main.py",
     "dashboard": "python -c \"import webbrowser; webbrowser.open('http://localhost:18923')\""

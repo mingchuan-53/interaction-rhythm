@@ -3,7 +3,8 @@ import os
 
 APP_NAME = "交互节律"
 APP_ICON_TEXT = "节"
-APP_VERSION = "1.2"
+APP_VERSION = "1.5"
+APP_MUTEX_NAME = os.getenv("INTERACTION_RHYTHM_MUTEX_NAME", r"Local\Mingchuan.InteractionRhythm.SingleInstance")
 
 PORT = 18923
 POLL_INTERVAL = 0.5

@@ -94,6 +94,8 @@ class Handler(SimpleHTTPRequestHandler):
             })
         elif path == "/api/update/check":
             self._handle_update_check()
+        elif path == "/api/settings":
+            self._handle_settings()
         else:
             self._serve_static()
 
@@ -101,6 +103,8 @@ class Handler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/api/update/install":
             self._handle_update_install()
+        elif parsed.path == "/api/settings":
+            self._handle_settings_save()
         else:
             self.send_error(404)
 
@@ -139,6 +143,21 @@ class Handler(SimpleHTTPRequestHandler):
         except Exception as e:
             self._json({"ok": False, "error": str(e)})
 
+    def _handle_settings(self):
+        try:
+            from settings import get_settings
+            self._json({"ok": True, "settings": get_settings()})
+        except Exception as e:
+            self._json({"ok": False, "error": str(e)})
+
+    def _handle_settings_save(self):
+        try:
+            from settings import save_settings
+            body = self._read_json_body()
+            self._json({"ok": True, "settings": save_settings(body)})
+        except Exception as e:
+            self._json({"ok": False, "error": str(e)})
+
     def _download_json(self, data):
         body = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
         name = f"interaction-rhythm-{data['range']['start']}-{data['range']['end']}.json"
@@ -169,6 +188,13 @@ class Handler(SimpleHTTPRequestHandler):
                 ])
         for app in data.get("applications", []):
             writer.writerow(["application", "", "", app["app"], "", app.get("path", ""), "", "", "", app["seconds"]])
+        for item in data.get("interactions", []):
+            ts = item.get("ts", "")
+            writer.writerow([
+                "interaction", ts[:10], ts[11:13], item.get("app", ""), "",
+                item.get("path", ""), item.get("keyboard", 0), item.get("mouse", 0),
+                item.get("responses", 0), "",
+            ])
         for session in data.get("sessions", []):
             writer.writerow([
                 "session", session["start"][:10], "", session["app"], session.get("title", ""),
@@ -241,15 +267,22 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_error(404)
 
 
+class ReusableHTTPServer(HTTPServer):
+    allow_reuse_address = True
+
+
 class StatsServer:
-    def __init__(self, db, port: int = PORT, host: str = "0.0.0.0", shutdown_callback=None):
+    def __init__(self, db, port: int = PORT, host: str = "127.0.0.1", shutdown_callback=None):
         Handler.db = db
         Handler.shutdown_callback = shutdown_callback
-        self._httpd = HTTPServer((host, port), Handler)
+        self._httpd = ReusableHTTPServer((host, port), Handler)
         self._port = port
 
     def start(self):
         threading.Thread(target=self._httpd.serve_forever, daemon=True).start()
 
     def stop(self):
-        self._httpd.shutdown()
+        try:
+            self._httpd.shutdown()
+        finally:
+            self._httpd.server_close()

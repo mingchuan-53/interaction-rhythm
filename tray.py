@@ -1,14 +1,12 @@
-"""系统托盘图标（pystray + Pillow）高分辨率版"""
+"""系统托盘图标与应用图标生成。"""
+from pathlib import Path
 from PIL import Image, ImageDraw
 
 import config
 
 
 def make_icon(size: int = 256) -> Image.Image:
-    """生成高清节律方格图标。
-
-    小尺寸图标减少格子数量，避免 Windows 桌面和任务栏缩放后发糊。
-    """
+    """生成高清节律方格图标。"""
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     pad = max(1, int(size * 0.075))
@@ -63,7 +61,7 @@ def make_icon(size: int = 256) -> Image.Image:
 
 
 def make_ico(ico_path: str):
-    """生成 .ico 文件（多分辨率）"""
+    """生成 .ico 文件（多分辨率）。"""
     sizes = [16, 32, 48, 64, 128, 256]
     imgs = [make_icon(s) for s in sizes]
     imgs[-1].save(
@@ -74,255 +72,329 @@ def make_ico(ico_path: str):
     )
 
 
-def create_tray(tracker, port: int):
-    """返回 (icon, start_fn) — icon.run() 在后台线程启动托盘"""
+def create_tray(tracker, port: int, shutdown_callback=None):
+    """返回 (icon, start_fn)。Windows 原生托盘，避免 pystray 菜单延迟。"""
+    import ctypes
+    import ctypes.wintypes as wintypes
     import os
-    import pystray
+    import tempfile
+    import threading
+    import time
     import webbrowser
 
-    _APP_NAMES = {
-        "Code": "VS Code", "chrome": "Chrome", "msedge": "Edge",
-        "firefox": "Firefox", "explorer": "文件管理器",
-        "cmd": "命令提示符", "powershell": "PowerShell",
-        "WindowsTerminal": "终端", "wt": "终端",
-        "WeChat": "微信", "wechat": "微信", "QQ": "QQ",
-        "DingTalk": "钉钉", "dingtalk": "钉钉",
-        "Lark": "飞书", "feishu": "飞书",
-        "Teams": "Teams", "Telegram": "Telegram",
-        "Discord": "Discord", "Slack": "Slack",
-        "notepad": "记事本", "notepad++": "Notepad++",
-        "Obsidian": "Obsidian", "Notion": "Notion",
-        "Typora": "Typora", "Spotify": "Spotify",
-        "Zoom": "Zoom", "Docker Desktop": "Docker",
-        "Photoshop": "Photoshop", "Figma": "Figma",
-        "idea64": "IntelliJ", "pycharm64": "PyCharm",
-        "devenv": "Visual Studio",
-        "ApplicationFrameHost": "UWP应用",
-    }
+    if os.name != "nt":
+        def _start_fallback():
+            return None
+        return None, _start_fallback
+
+    user32 = ctypes.windll.user32
+    shell32 = ctypes.windll.shell32
+    kernel32 = ctypes.windll.kernel32
+
+    LRESULT = ctypes.c_longlong if ctypes.sizeof(ctypes.c_void_p) == 8 else ctypes.c_long
+    HICON = getattr(wintypes, "HICON", wintypes.HANDLE)
+    HCURSOR = getattr(wintypes, "HCURSOR", wintypes.HANDLE)
+    HBRUSH = getattr(wintypes, "HBRUSH", wintypes.HANDLE)
+    UINT_PTR = ctypes.c_ulonglong if ctypes.sizeof(ctypes.c_void_p) == 8 else ctypes.c_ulong
+    WNDPROC = ctypes.WINFUNCTYPE(LRESULT, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
+
+    WM_DESTROY = 0x0002
+    WM_COMMAND = 0x0111
+    WM_NULL = 0x0000
+    WM_USER = 0x0400
+    WM_TRAY = WM_USER + 23
+    WM_LBUTTONUP = 0x0202
+    WM_RBUTTONUP = 0x0205
+    WM_CONTEXTMENU = 0x007B
+
+    NIM_ADD = 0x00000000
+    NIM_MODIFY = 0x00000001
+    NIM_DELETE = 0x00000002
+    NIF_MESSAGE = 0x00000001
+    NIF_ICON = 0x00000002
+    NIF_TIP = 0x00000004
+
+    IMAGE_ICON = 1
+    LR_LOADFROMFILE = 0x00000010
+    LR_DEFAULTSIZE = 0x00000040
+
+    MF_STRING = 0x00000000
+    TPM_LEFTALIGN = 0x0000
+    TPM_BOTTOMALIGN = 0x0020
+    TPM_RIGHTBUTTON = 0x0002
+    TPM_NONOTIFY = 0x0080
+    TPM_RETURNCMD = 0x0100
+
+    ID_OPEN = 1001
+    ID_REFRESH = 1002
+    ID_QUIT = 1003
+
+    class GUID(ctypes.Structure):
+        _fields_ = [
+            ("Data1", wintypes.DWORD),
+            ("Data2", wintypes.WORD),
+            ("Data3", wintypes.WORD),
+            ("Data4", wintypes.BYTE * 8),
+        ]
+
+    class NOTIFYICONDATAW(ctypes.Structure):
+        _fields_ = [
+            ("cbSize", wintypes.DWORD),
+            ("hWnd", wintypes.HWND),
+            ("uID", wintypes.UINT),
+            ("uFlags", wintypes.UINT),
+            ("uCallbackMessage", wintypes.UINT),
+            ("hIcon", HICON),
+            ("szTip", wintypes.WCHAR * 128),
+            ("dwState", wintypes.DWORD),
+            ("dwStateMask", wintypes.DWORD),
+            ("szInfo", wintypes.WCHAR * 256),
+            ("uVersion", wintypes.UINT),
+            ("szInfoTitle", wintypes.WCHAR * 64),
+            ("dwInfoFlags", wintypes.DWORD),
+            ("guidItem", GUID),
+            ("hBalloonIcon", HICON),
+        ]
+
+    class WNDCLASSW(ctypes.Structure):
+        _fields_ = [
+            ("style", wintypes.UINT),
+            ("lpfnWndProc", WNDPROC),
+            ("cbClsExtra", ctypes.c_int),
+            ("cbWndExtra", ctypes.c_int),
+            ("hInstance", wintypes.HINSTANCE),
+            ("hIcon", HICON),
+            ("hCursor", HCURSOR),
+            ("hbrBackground", HBRUSH),
+            ("lpszMenuName", wintypes.LPCWSTR),
+            ("lpszClassName", wintypes.LPCWSTR),
+        ]
+
+    user32.RegisterClassW.argtypes = [ctypes.POINTER(WNDCLASSW)]
+    user32.RegisterClassW.restype = wintypes.ATOM
+    user32.CreateWindowExW.argtypes = [
+        wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD,
+        ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+        wintypes.HWND, wintypes.HMENU, wintypes.HINSTANCE, ctypes.c_void_p,
+    ]
+    user32.CreateWindowExW.restype = wintypes.HWND
+    user32.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+    user32.DefWindowProcW.restype = LRESULT
+    user32.DestroyWindow.argtypes = [wintypes.HWND]
+    user32.PostQuitMessage.argtypes = [ctypes.c_int]
+    user32.GetMessageW.argtypes = [ctypes.POINTER(wintypes.MSG), wintypes.HWND, wintypes.UINT, wintypes.UINT]
+    user32.GetMessageW.restype = wintypes.BOOL
+    user32.TranslateMessage.argtypes = [ctypes.POINTER(wintypes.MSG)]
+    user32.DispatchMessageW.argtypes = [ctypes.POINTER(wintypes.MSG)]
+    user32.LoadImageW.argtypes = [wintypes.HINSTANCE, wintypes.LPCWSTR, wintypes.UINT, ctypes.c_int, ctypes.c_int, wintypes.UINT]
+    user32.LoadImageW.restype = wintypes.HANDLE
+    user32.DestroyIcon.argtypes = [HICON]
+    user32.CreatePopupMenu.restype = wintypes.HMENU
+    user32.AppendMenuW.argtypes = [wintypes.HMENU, wintypes.UINT, UINT_PTR, wintypes.LPCWSTR]
+    user32.TrackPopupMenu.argtypes = [
+        wintypes.HMENU, wintypes.UINT, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.HWND, ctypes.c_void_p
+    ]
+    user32.TrackPopupMenu.restype = ctypes.c_int
+    user32.DestroyMenu.argtypes = [wintypes.HMENU]
+    user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+    user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+    user32.GetCursorPos.argtypes = [ctypes.POINTER(wintypes.POINT)]
+    shell32.Shell_NotifyIconW.argtypes = [wintypes.DWORD, ctypes.POINTER(NOTIFYICONDATAW)]
+    shell32.Shell_NotifyIconW.restype = wintypes.BOOL
+    kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
+    kernel32.GetModuleHandleW.restype = wintypes.HMODULE
+    kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+    kernel32.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    kernel32.TerminateProcess.restype = wintypes.BOOL
 
     def _fmt(sec):
-        h, m = divmod(sec // 60, 60)
+        h, m = divmod(int(sec) // 60, 60)
         return f"{h}h {m:02d}m" if h else f"{m}m"
 
-    def _noop(icon=None, item=None):
-        pass
-
-    def _app_name(app):
-        if app in _APP_NAMES:
-            return _APP_NAMES[app]
-        base = app.replace(".exe", "")
-        return _APP_NAMES.get(base, base.title())
-
-    def _clip(text, limit=26):
-        return text if len(text) <= limit else text[: limit - 1] + "…"
-
     def _tooltip():
-        s = tracker.stats
-        total = int(s.get("keystrokes", 0)) + int(s.get("mouse_events", 0))
-        return f"{config.APP_NAME} · 响应 {total:,} · 活跃 {_fmt(s.get('total_seconds', 0))}"
+        try:
+            s = tracker.stats
+            total = int(s.get("keystrokes", 0)) + int(s.get("mouse_events", 0))
+            return f"{config.APP_NAME} · 响应 {total:,} · 活跃 {_fmt(s.get('total_seconds', 0))}"
+        except Exception:
+            return f"{config.APP_NAME} · 后台运行"
 
     def _restore_window():
-        import ctypes
-
-        user32 = ctypes.windll.user32
-        _set_window_pos = ctypes.WINFUNCTYPE(
-            ctypes.c_bool,
-            ctypes.c_void_p, ctypes.c_void_p,
-            ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
-            ctypes.c_uint,
-        )(("SetWindowPos", user32))
-        user32.GetParent.argtypes = [ctypes.c_void_p]
-        user32.GetParent.restype = ctypes.c_void_p
-        user32.GetWindow.argtypes = [ctypes.c_void_p, ctypes.c_uint]
-        user32.GetWindow.restype = ctypes.c_void_p
-        user32.GetSystemMetrics.argtypes = [ctypes.c_int]
-        user32.GetSystemMetrics.restype = ctypes.c_int
-        user32.SystemParametersInfoW.argtypes = [ctypes.c_uint, ctypes.c_uint, ctypes.c_void_p, ctypes.c_uint]
-        user32.SystemParametersInfoW.restype = ctypes.c_bool
-        user32.GetWindowRect.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
-        user32.GetWindowRect.restype = ctypes.c_bool
-        SW_SHOW = 5
-        SW_RESTORE = 9
-        GWL_EXSTYLE = -20
-        GW_OWNER = 4
-        WS_EX_APPWINDOW = 0x00040000
-        WS_EX_TOOLWINDOW = 0x00000080
-        SWP_NOZORDER = 0x0004
-        SWP_NOOWNERZORDER = 0x0200
-        SWP_SHOWWINDOW = 0x0040
-        SWP_NOSIZE = 0x0001
-        SWP_NOMOVE = 0x0002
-        SWP_FRAMECHANGED = 0x0020
-        SPI_GETWORKAREA = 0x0030
-        SM_CXSCREEN = 0
-        SM_CYSCREEN = 1
-        WINDOW_WIDTH = 540
-        WINDOW_HEIGHT = 610
-
-        class RECT(ctypes.Structure):
-            _fields_ = [
-                ("left", ctypes.c_long), ("top", ctypes.c_long),
-                ("right", ctypes.c_long), ("bottom", ctypes.c_long),
-            ]
-
-        def _center_position(width, height):
-            work = RECT()
-            if user32.SystemParametersInfoW(SPI_GETWORKAREA, 0, ctypes.byref(work), 0):
-                left, top, right, bottom = work.left, work.top, work.right, work.bottom
-            else:
-                left, top = 0, 0
-                right = user32.GetSystemMetrics(SM_CXSCREEN)
-                bottom = user32.GetSystemMetrics(SM_CYSCREEN)
-            return (
-                left + max(0, (right - left - width) // 2),
-                top + max(0, (bottom - top - height) // 2),
-            )
-
-        def _is_offscreen_or_tiny(hwnd):
-            rect = RECT()
-            if not user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+        try:
+            from window import _find_hwnd, _restore_main_window
+            hwnd = _find_hwnd(config.APP_NAME)
+            if hwnd:
+                _restore_main_window(hwnd)
                 return True
-            width = max(0, rect.right - rect.left)
-            height = max(0, rect.bottom - rect.top)
-            if width < WINDOW_WIDTH // 2 or height < WINDOW_HEIGHT // 2:
-                return True
+        except Exception:
+            pass
+        return False
 
-            work = RECT()
-            if user32.SystemParametersInfoW(SPI_GETWORKAREA, 0, ctypes.byref(work), 0):
-                return (
-                    rect.right <= work.left
-                    or rect.left >= work.right
-                    or rect.bottom <= work.top
-                    or rect.top >= work.bottom
-                    or rect.left < work.left - 200
-                    or rect.top < work.top - 200
-                )
-            return rect.left < -200 or rect.top < -200
-
-        candidates = []
-
-        def _enum(hwnd, _):
-            length = user32.GetWindowTextLengthW(hwnd)
-            if length:
-                buf = ctypes.create_unicode_buffer(length + 1)
-                user32.GetWindowTextW(hwnd, buf, length + 1)
-                if buf.value == config.APP_NAME:
-                    rect = RECT()
-                    user32.GetWindowRect(hwnd, ctypes.byref(rect))
-                    area = max(0, rect.right - rect.left) * max(0, rect.bottom - rect.top)
-                    exstyle = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
-                    score = area
-                    if exstyle & WS_EX_APPWINDOW:
-                        score += 1_000_000_000
-                    if exstyle & WS_EX_TOOLWINDOW:
-                        score -= 1_000_000_000
-                    if user32.GetParent(hwnd):
-                        score -= 1_000_000
-                    if user32.GetWindow(hwnd, GW_OWNER):
-                        score -= 1_000_000
-                    candidates.append((score, hwnd))
-            return True
-
-        callback = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)(_enum)
-        user32.EnumWindows(callback, 0)
-        if not candidates:
-            return False
-        hwnd = max(candidates, key=lambda item: item[0])[1]
-        user32.ShowWindow(hwnd, SW_SHOW)
-        user32.ShowWindow(hwnd, SW_RESTORE)
-        if _is_offscreen_or_tiny(hwnd):
-            x, y = _center_position(WINDOW_WIDTH, WINDOW_HEIGHT)
-            _set_window_pos(
-                hwnd, 0, x, y, WINDOW_WIDTH, WINDOW_HEIGHT,
-                SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW,
-            )
-        else:
-            _set_window_pos(
-                hwnd, 0, 0, 0, 0, 0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW,
-            )
-        user32.SetForegroundWindow(hwnd)
-        return True
-
-    def _open_dashboard(icon=None, item=None):
+    def _open_dashboard():
         if not _restore_window():
-            webbrowser.open(f"http://localhost:{port}")
+            webbrowser.open(f"http://127.0.0.1:{port}")
 
-    def _refresh_now(icon, item=None):
-        icon.title = _tooltip()
-        icon.menu = _build_menu()
-        icon.update_menu()
+    def _refresh_now(icon):
+        try:
+            tracker.flush()
+        except Exception:
+            pass
+        icon.update_tooltip(_tooltip())
 
-    def _build_menu():
-        s = tracker.stats
-        kd = f"{s.get('keystrokes', 0):,}"
-        md = f"{s.get('mouse_events', 0):,}"
-        rd = f"{s.get('keystrokes', 0) + s.get('mouse_events', 0):,}"
-        total = _fmt(s["total_seconds"])
-        apps = s.get("apps", [])[:8]
+    def _hard_exit(_icon=None):
+        try:
+            if kernel32.TerminateProcess(kernel32.GetCurrentProcess(), 0):
+                return
+        except Exception:
+            pass
+        os._exit(0)
 
-        items = [
-            pystray.MenuItem(f"打开 {config.APP_NAME}", _open_dashboard, default=True),
-            pystray.MenuItem(f"今日响应  {rd}", _noop, enabled=False),
-            pystray.MenuItem(f"键盘  {kd}    鼠标  {md}", _noop, enabled=False),
-            pystray.MenuItem(f"活跃时长  {total}", _noop, enabled=False),
-            pystray.Menu.SEPARATOR,
-        ]
-        for a in apps:
-            name = _clip(_app_name(a["app"]))
-            t = _fmt(a["seconds"])
-            items.append(pystray.MenuItem(f"{len(items)-4}. {name}  {t}", _noop, enabled=False))
-        items += [
-            pystray.Menu.SEPARATOR,
-            pystray.MenuItem("刷新数据", _refresh_now),
-            pystray.MenuItem(f"退出 {config.APP_NAME}", _on_quit),
-        ]
-        return pystray.Menu(*items)
+    class NativeTrayIcon:
+        def __init__(self):
+            self.hwnd = None
+            self.hicon = None
+            self._class_name = f"InteractionRhythmTray{os.getpid()}"
+            self._hinstance = kernel32.GetModuleHandleW(None)
+            self._wndproc = WNDPROC(self._window_proc)
+            self._deleted = False
 
-    def _on_quit(icon, item):
-        def _quit():
-            import time
+        def _icon_path(self):
+            path = Path(tempfile.gettempdir()) / "interaction-rhythm-tray.ico"
+            if not path.exists() or path.stat().st_size < 1024:
+                make_ico(str(path))
+            return str(path)
 
-            def _force_exit():
-                time.sleep(1.2)
-                os._exit(0)
+        def _make_nid(self, flags=0, tooltip=None):
+            nid = NOTIFYICONDATAW()
+            nid.cbSize = ctypes.sizeof(NOTIFYICONDATAW)
+            nid.hWnd = self.hwnd
+            nid.uID = 1
+            nid.uFlags = flags
+            nid.uCallbackMessage = WM_TRAY
+            nid.hIcon = self.hicon
+            if tooltip is not None:
+                nid.szTip = str(tooltip)[:127]
+            return nid
 
-            import threading
-            threading.Thread(target=_force_exit, daemon=True).start()
+        def _register_window(self):
+            wc = WNDCLASSW()
+            wc.lpfnWndProc = self._wndproc
+            wc.hInstance = self._hinstance
+            wc.lpszClassName = self._class_name
+            user32.RegisterClassW(ctypes.byref(wc))
+            self.hwnd = user32.CreateWindowExW(
+                0, self._class_name, self._class_name, 0,
+                0, 0, 0, 0, None, None, self._hinstance, None,
+            )
+            if not self.hwnd:
+                raise RuntimeError("Native tray window creation failed")
+
+        def _load_icon(self):
+            self.hicon = user32.LoadImageW(
+                None, self._icon_path(), IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE
+            )
+            if not self.hicon:
+                raise RuntimeError("Native tray icon loading failed")
+
+        def add(self):
+            self._register_window()
+            self._load_icon()
+            nid = self._make_nid(NIF_MESSAGE | NIF_ICON | NIF_TIP, _tooltip())
+            if not shell32.Shell_NotifyIconW(NIM_ADD, ctypes.byref(nid)):
+                raise RuntimeError("Native tray icon add failed")
+
+        def update_tooltip(self, tooltip):
+            if self._deleted or not self.hwnd:
+                return
+            nid = self._make_nid(NIF_TIP, tooltip)
+            shell32.Shell_NotifyIconW(NIM_MODIFY, ctypes.byref(nid))
+
+        def delete(self):
+            if self._deleted or not self.hwnd:
+                return
+            self._deleted = True
+            nid = self._make_nid(0)
+            shell32.Shell_NotifyIconW(NIM_DELETE, ctypes.byref(nid))
+
+        def _show_menu(self):
+            menu = user32.CreatePopupMenu()
+            if not menu:
+                return
             try:
-                tracker.stop()
-            except Exception:
-                pass
-            try:
-                icon.visible = False
-            except Exception:
-                pass
-            os._exit(0)
+                user32.AppendMenuW(menu, MF_STRING, ID_OPEN, "交互节律")
+                user32.AppendMenuW(menu, MF_STRING, ID_REFRESH, "刷新数据")
+                user32.AppendMenuW(menu, MF_STRING, ID_QUIT, "退出后台")
+                point = wintypes.POINT()
+                user32.GetCursorPos(ctypes.byref(point))
+                user32.SetForegroundWindow(self.hwnd)
+                command = user32.TrackPopupMenu(
+                    menu,
+                    TPM_LEFTALIGN | TPM_BOTTOMALIGN | TPM_RIGHTBUTTON | TPM_NONOTIFY | TPM_RETURNCMD,
+                    point.x,
+                    point.y,
+                    0,
+                    self.hwnd,
+                    None,
+                )
+                if command == ID_OPEN:
+                    _open_dashboard()
+                elif command == ID_REFRESH:
+                    _refresh_now(self)
+                elif command == ID_QUIT:
+                    _hard_exit()
+                user32.PostMessageW(self.hwnd, WM_NULL, 0, 0)
+            finally:
+                user32.DestroyMenu(menu)
 
-        import threading
-        threading.Thread(target=_quit, daemon=True).start()
+        def _window_proc(self, hwnd, msg, wparam, lparam):
+            if msg == WM_TRAY:
+                if lparam == WM_LBUTTONUP:
+                    _open_dashboard()
+                    return 0
+                if lparam in (WM_RBUTTONUP, WM_CONTEXTMENU):
+                    self._show_menu()
+                    return 0
+            elif msg == WM_COMMAND:
+                command = int(wparam) & 0xFFFF
+                if command == ID_OPEN:
+                    _open_dashboard()
+                    return 0
+                if command == ID_REFRESH:
+                    _refresh_now(self)
+                    return 0
+                if command == ID_QUIT:
+                    _hard_exit(self)
+                    return 0
+            elif msg == WM_DESTROY:
+                self.delete()
+                user32.PostQuitMessage(0)
+                return 0
+            return user32.DefWindowProcW(hwnd, msg, wparam, lparam)
 
-    icon = pystray.Icon(
-        config.APP_NAME,
-        make_icon(64),
-        _tooltip(),
-        menu=_build_menu(),
-    )
+        def run(self):
+            self.add()
+            msg = wintypes.MSG()
+            while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
+                user32.TranslateMessage(ctypes.byref(msg))
+                user32.DispatchMessageW(ctypes.byref(msg))
+            self.delete()
+            if self.hicon:
+                try:
+                    user32.DestroyIcon(self.hicon)
+                except Exception:
+                    pass
+
+    icon = NativeTrayIcon()
 
     def _refresh():
-        """每隔一段时间刷新菜单数据"""
-        import time
         while True:
-            time.sleep(15)
+            time.sleep(30)
             try:
-                icon.title = _tooltip()
-                icon.menu = _build_menu()
-                icon.update_menu()
+                icon.update_tooltip(_tooltip())
             except Exception:
                 pass
 
     def start():
-        import threading
         threading.Thread(target=_refresh, daemon=True).start()
         icon.run()
 
