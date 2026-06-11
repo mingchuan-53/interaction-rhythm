@@ -173,7 +173,10 @@ def _manifest_from_cache(cache: dict[str, Any] | None) -> tuple[dict[str, Any] |
         return None, 0
     try:
         checked_at = float(cache.get("checked_at") or 0)
-        return _normalize_manifest(raw), checked_at
+        manifest = _normalize_manifest(raw)
+        if _version_tuple(manifest["latest"]) < _version_tuple(config.APP_VERSION):
+            return None, 0
+        return manifest, checked_at
     except Exception:
         return None, 0
 
