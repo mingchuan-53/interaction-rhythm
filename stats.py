@@ -255,10 +255,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Content-Type", ct)
             self.send_header("Content-Length", str(len(body)))
             
-            # PWA 相关资源的缓存策略
-            if fp.name in ("sw.js", "manifest.json"):
-                self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
-            elif fp.suffix in (".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".woff", ".woff2", ".ttf"):
+            if fp.suffix in (".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".woff", ".woff2", ".ttf"):
                 self.send_header("Cache-Control", "public, max-age=86400")
             
             self.end_headers()
