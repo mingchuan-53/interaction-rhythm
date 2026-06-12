@@ -127,6 +127,8 @@ python main.py
 
 完整开发脉络见 [CHANGELOG.md](CHANGELOG.md)。
 
+后续版本采用半月或一月一次的低频维护节奏，排期见 [docs/planning/iteration-calendar.md](docs/planning/iteration-calendar.md)。
+
 ## 许可
 
 本项目使用 [MIT License](LICENSE)。
