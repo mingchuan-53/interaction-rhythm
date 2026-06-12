@@ -129,6 +129,10 @@ python main.py
 
 后续版本采用半月或一月一次的低频维护节奏，排期见 [docs/planning/iteration-calendar.md](docs/planning/iteration-calendar.md)。
 
+## Agent 接手
+
+新对话继续迭代时，先读 [AGENTS.md](AGENTS.md) 和 [docs/handoff/agent-handoff.md](docs/handoff/agent-handoff.md)，再进入代码修改。
+
 ## 许可
 
 本项目使用 [MIT License](LICENSE)。
