@@ -1,6 +1,6 @@
 {
   "name": "interaction-rhythm",
-  "version": "1.9.5",
+  "version": "1.9.6",
   "description": "不读取内容的数字手感与应用强度观察器",
   "private": false,
   "scripts": {

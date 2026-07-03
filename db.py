@@ -904,6 +904,106 @@ class DB:
     def _hour_range_text(self, hour: int) -> str:
         return f"{hour:02d}:00-{(hour + 1) % 24:02d}:00"
 
+    def _duration_text(self, seconds: int) -> str:
+        seconds = max(0, int(seconds or 0))
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        if hours and minutes:
+            return f"{hours} 小时 {minutes} 分钟"
+        if hours:
+            return f"{hours} 小时"
+        if minutes:
+            return f"{minutes} 分钟"
+        return f"{seconds} 秒"
+
+    def media_snapshot(self, date: str | None = None) -> dict:
+        try:
+            date = datetime.fromisoformat(date or "").strftime("%Y-%m-%d")
+        except (TypeError, ValueError):
+            date = datetime.now().strftime("%Y-%m-%d")
+
+        replay = self.day_replay(date)
+        summary = replay.get("summary") or {}
+        keyboard = int(summary.get("keyboard") or 0)
+        mouse = int(summary.get("mouse") or 0)
+        responses = int(summary.get("responses") or keyboard + mouse)
+        active_seconds = int(summary.get("active_seconds") or 0)
+        peak_hour = summary.get("peak_hour")
+        apps = replay.get("app_strength") or []
+        top_apps = []
+        for app in apps[:5]:
+            responses_for_app = int(app.get("responses") or 0)
+            seconds_for_app = int(app.get("seconds") or 0)
+            top_apps.append({
+                "name": self._app_display_name(app.get("app", "")),
+                "responses": responses_for_app,
+                "seconds": seconds_for_app,
+                "density": app.get("response_density") or 0,
+            })
+
+        if keyboard > mouse * 1.5:
+            rhythm_type = "键盘偏强"
+        elif mouse > keyboard * 1.5:
+            rhythm_type = "鼠标偏强"
+        elif responses:
+            rhythm_type = "混合手感"
+        else:
+            rhythm_type = "安静日"
+
+        lines = [
+            f"# 扣舷数字手感快照｜{date}",
+            "",
+            f"- 手感类型：{rhythm_type}",
+            f"- 手感响应：{responses:,} 次（键盘 {keyboard:,} / 鼠标 {mouse:,}）",
+            f"- 活跃时长：{self._duration_text(active_seconds)}",
+        ]
+        if peak_hour is not None:
+            lines.append(f"- 峰值时段：{self._hour_range_text(int(peak_hour))}")
+        else:
+            lines.append("- 峰值时段：暂无明确峰值")
+        if top_apps:
+            app_text = "、".join(
+                f"{app['name']} {app['responses']:,} 次" if app["responses"] else app["name"]
+                for app in top_apps[:3]
+                if app["name"]
+            )
+            if app_text:
+                lines.append(f"- 主场应用：{app_text}")
+        lines.extend([
+            "",
+            "一句话回放：",
+            replay.get("conclusion") or "这一天还没有留下清晰手感。",
+            "",
+            "可讲线索：",
+        ])
+        for finding in (replay.get("findings") or [])[:3]:
+            lines.append(f"- {finding}")
+        if not replay.get("findings"):
+            lines.append("- 暂时没有足够聚合记录生成稳定线索。")
+        lines.extend([
+            "",
+            "隐私边界：扣舷不记录输入内容、具体按键、鼠标坐标、截图或窗口正文；这份快照只来自本机聚合统计。",
+        ])
+
+        return {
+            "generated_at": datetime.now().isoformat(timespec="seconds"),
+            "scope": "media_snapshot",
+            "date": date,
+            "summary": {
+                "rhythm_type": rhythm_type,
+                "keyboard": keyboard,
+                "mouse": mouse,
+                "responses": responses,
+                "active_seconds": active_seconds,
+                "peak_hour": peak_hour,
+                "top_apps": top_apps,
+            },
+            "headline": f"{date} 的数字手感：{rhythm_type}，{responses:,} 次响应",
+            "draft": "\n".join(lines),
+            "privacy_note": "只使用本机聚合统计，不包含输入内容、具体按键、鼠标坐标、截图或窗口正文。",
+            "source": "local_aggregate",
+        }
+
     def _apps_during_hour(self, sessions: list[dict], date: str, hour: int, limit: int = 2) -> list[str]:
         start = datetime.fromisoformat(f"{date}T{hour:02d}:00:00")
         end = start + timedelta(hours=1)
@@ -1522,6 +1622,20 @@ class DB:
             })
             cursor += timedelta(days=1)
         return {"month": base.strftime("%Y-%m"), "days": days}
+
+    def year_heatmap(self, year: str | None = None) -> dict:
+        current = datetime.now()
+        try:
+            year_value = int(year or current.strftime("%Y"))
+            if year_value < 2000 or year_value > current.year:
+                year_value = current.year
+        except (TypeError, ValueError):
+            year_value = current.year
+
+        months = []
+        for month in range(1, 13):
+            months.append(self.month_heatmap(f"{year_value}-{month:02d}"))
+        return {"year": str(year_value), "months": months}
 
     def cleanup(self, days: int, hourly_days: int | None = None):
         cutoff = (datetime.now() - timedelta(days=days)).isoformat(timespec="seconds")

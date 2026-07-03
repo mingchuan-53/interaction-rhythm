@@ -3,7 +3,7 @@ import os
 
 APP_NAME = "扣舷"
 APP_ICON_TEXT = "扣"
-APP_VERSION = "1.9.5"
+APP_VERSION = "1.9.6"
 APP_MUTEX_NAME = os.getenv("INTERACTION_RHYTHM_MUTEX_NAME", r"Local\Mingchuan.InteractionRhythm.SingleInstance")
 
 PORT = 18923

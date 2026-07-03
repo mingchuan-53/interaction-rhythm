@@ -158,8 +158,8 @@
     .heat-toggle span{padding:0;font-size:15px;font-weight:800;transition:color .12s ease,opacity .12s ease}
     .heat-toggle:hover span{color:var(--text2)}
     .heat-toggle input:checked + span{color:var(--primary)}
-    .heat-range{display:flex;gap:3px;margin-left:8px;border:1px solid var(--border);border-radius:7px;padding:2px;background:var(--surface-hover)}
-    .heat-range button{border:0;background:transparent;color:var(--text4);font-size:11px;font-weight:750;border-radius:5px;padding:2px 6px;cursor:pointer;line-height:1}
+    .heat-range{display:flex;gap:3px;border:1px solid var(--border);border-radius:7px;padding:2px;background:var(--surface-hover)}
+    .heat-range button{border:0;background:transparent;color:var(--text4);font-size:11px;font-weight:750;border-radius:5px;padding:2px 7px;cursor:pointer;line-height:1}
     .heat-range button.active{background:var(--primary-dim);color:var(--primary)}
     .heat-wrap{flex:1;display:flex;flex-direction:column;align-items:center;min-height:0;justify-content:center;width:100%;overflow:hidden}
     .heat-days{display:grid;grid-template-columns:repeat(var(--heat-day-count),var(--heat-day-width));justify-content:center;width:max-content;margin-bottom:6px;flex-shrink:0;gap:var(--heat-day-gap)}
@@ -174,15 +174,21 @@
     .heat-grid.month{grid-template-columns:repeat(7,18px);gap:5px;align-items:center}
     .heat-grid.month .month-cell{width:18px;height:18px;border-radius:5px;cursor:pointer;outline:1px solid rgba(255,255,255,.58);outline-offset:-1px}
     html[data-theme="dark"] .heat-grid.month .month-cell{outline-color:rgba(255,255,255,.05)}
+    .heat-grid.year{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px 8px;width:100%;max-width:430px;align-items:start;padding-top:3px}
+    .year-month{min-width:0;display:grid;gap:3px;justify-items:center}
+    .year-month-label{font-size:9px;font-weight:750;color:var(--text4);line-height:1}
+    .year-month-grid{display:grid;grid-template-columns:repeat(7,5.5px);gap:1.3px;justify-content:center}
+    .year-cell{width:5.5px;height:5.5px;border-radius:1.6px;outline:1px solid rgba(255,255,255,.45);outline-offset:-1px}
+    html[data-theme="dark"] .year-cell{outline-color:rgba(255,255,255,.04)}
     .hc{position:relative;border-radius:3px;cursor:pointer;transition:transform .1s ease,box-shadow .1s ease;width:var(--heat-cell);height:var(--heat-cell);outline:1px solid rgba(255,255,255,.58);outline-offset:-1px}
     html[data-theme="dark"] .hc{outline-color:rgba(255,255,255,.05)}
     .hc.now{box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 60%,transparent);z-index:1}
     .hc:hover{transform:scale(1.18);z-index:2;box-shadow:0 0 6px rgba(0,0,0,.18)}
-    .heat-foot{display:flex;align-items:center;gap:6px;margin-top:7px;justify-content:center;flex-shrink:0}
+    .heat-foot{display:flex;align-items:center;gap:8px;margin-top:7px;justify-content:space-between;flex-shrink:0}
     .heat-foot .heat-legend{display:flex;align-items:center;gap:5px}
     .heat-foot span{font-size:10px;color:var(--text4)}
     .heat-foot .lg-cells{display:flex;gap:2px}
-    .heat-foot .lg-cells i{width:10px;height:10px;border-radius:2px;display:inline-block;outline:1px solid rgba(0,0,0,.035);outline-offset:-1px}
+    .heat-foot .lg-cells i{width:8px;height:10px;border-radius:2px;display:inline-block;outline:1px solid rgba(0,0,0,.035);outline-offset:-1px}
 
     /* ── App usage ──────────────── */
     .app-section{
@@ -248,12 +254,12 @@
       animation:modalCardIn .18s cubic-bezier(.2,.8,.2,1);
     }
     .modal.closing .modal-card{animation:modalCardOut .14s ease-in forwards}
-    .modal-card.settings-modal{max-width:430px;max-height:min(86vh,620px)}
+    .modal-card.settings-modal{max-width:430px;max-height:min(94vh,720px)}
     .modal-card.insight-modal{max-width:500px;max-height:none}
     .modal-card.analysis-modal{max-width:430px;max-height:none}
     .modal-card.update-modal{max-width:440px;max-height:none}
     .modal-card.intro-modal{max-width:430px;max-height:none}
-    .modal-card.settings-modal .modal-body{overflow:auto}
+    .modal-card.settings-modal .modal-body{overflow:hidden}
     .modal-card.insight-modal .modal-body,
     .modal-card.analysis-modal .modal-body,
     .modal-card.update-modal .modal-body,
@@ -337,9 +343,9 @@
     .insight-actions .action-card span{font-size:12.5px}
     .insight-foot{margin-top:10px;font-size:11.5px;color:var(--text4);line-height:1.45}
     .settings-panel{display:grid;gap:9px}
-    .settings-section{background:var(--surface-hover);border:1px solid var(--border);border-radius:10px;padding:10px;display:grid;gap:8px}
+    .settings-section{background:var(--surface-hover);border:1px solid var(--border);border-radius:10px;padding:9px 10px;display:grid;gap:7px}
     .settings-section h3{font-size:12.5px;font-weight:700;color:var(--text2);margin:0}
-    .setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:38px}
+    .setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:35px}
     .setting-copy{min-width:0}
     .setting-copy b{display:block;font-size:14px;color:var(--text);font-weight:700;line-height:1.25}
     .setting-copy span{display:block;font-size:11.5px;color:var(--text4);line-height:1.35;margin-top:2px}
@@ -352,6 +358,11 @@
     .settings-action:hover{border-color:var(--border-hover);background:var(--primary-dim)}
     .settings-action b{display:block;font-size:14px;font-weight:700;margin-bottom:4px}
     .settings-action span{display:block;font-size:12px;line-height:1.35;color:var(--text4)}
+    .media-snapshot{display:grid;gap:10px}
+    .media-headline{font-size:15px;font-weight:800;color:var(--text);line-height:1.35}
+    .media-draft{width:100%;min-height:260px;resize:vertical;border:1px solid var(--border);border-radius:8px;background:var(--surface-hover);color:var(--text2);font:12.5px/1.55 ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospace;padding:10px}
+    .media-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .media-copy-state{font-size:12px;color:var(--primary);min-height:18px}
     .intro-title{font-size:22px;font-weight:900;color:var(--text);line-height:1.15;margin-bottom:8px}
     .intro-copy{font-size:14px;color:var(--text2);line-height:1.68}
     .intro-points{display:grid;gap:8px;margin-top:12px}
@@ -360,7 +371,7 @@
     .theme-choice{height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text3);cursor:pointer;font-size:13px;font-weight:650}
     .theme-choice.active{border-color:color-mix(in srgb,var(--primary) 38%,transparent);background:var(--primary-dim);color:var(--primary)}
     .accent-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
-    .accent-choice{height:38px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;color:var(--text3);font-size:12px;font-weight:700}
+    .accent-choice{height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;color:var(--text3);font-size:12px;font-weight:700}
     .accent-choice i{width:12px;height:12px;border-radius:50%;display:block;background:var(--swatch)}
     .accent-choice.active{border-color:color-mix(in srgb,var(--primary) 42%,transparent);background:var(--primary-dim);color:var(--primary)}
 
@@ -376,6 +387,9 @@
       .heat-card{min-height:0}
       .heat-days{grid-template-columns:repeat(var(--heat-day-count),var(--heat-day-width));gap:var(--heat-day-gap)}
       .heat-grid{grid-template-columns:repeat(var(--heat-day-count),var(--heat-day-width));gap:var(--heat-day-gap)}
+      .heat-grid.year{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+      .year-month-grid{grid-template-columns:repeat(7,5px);gap:1.1px}
+      .year-cell{width:5px;height:5px}
       .app-list{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(5,64px);grid-auto-flow:column;grid-auto-rows:64px;gap:10px 8px}
       
       /* 触摸优化 */
@@ -387,6 +401,7 @@
       .app-meta{font-size:10.5px}
       .tool-btn, .theme-btn{width: 32px; height: 32px;}
       .settings-actions{grid-template-columns:1fr}
+      .media-actions{grid-template-columns:1fr}
       .heat-head{align-items:flex-start}
       .heat-title{gap:6px}
       .modal{align-items:flex-end;padding:0}
@@ -493,7 +508,6 @@
               <label class="heat-toggle"><input type="checkbox" id="heat-keyboard" checked onchange="renderHeatmap()"><span>键盘</span></label>
               <label class="heat-toggle"><input type="checkbox" id="heat-mouse" checked onchange="renderHeatmap()"><span>鼠标</span></label>
             </span><span class="heat-label-static">热力图</span>
-            <span class="heat-range"><button type="button" id="heat-week-btn" class="active" onclick="setHeatRange('week')">周</button><button type="button" id="heat-month-btn" onclick="setHeatRange('month')">月</button></span>
           </h2>
           <span class="heat-now-text" id="heat-now-text"></span>
         </div>
@@ -507,7 +521,8 @@
         <div class="heat-weekdays" id="heat-weekday-labels"></div>
       </div>
       <div class="heat-foot">
-        <div class="heat-legend"><span>less</span><div class="lg-cells" id="heat-lg"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span>more</span></div>
+        <span class="heat-range"><button type="button" id="heat-week-btn" class="active" onclick="setHeatRange('week')">周</button><button type="button" id="heat-month-btn" onclick="setHeatRange('month')">月</button><button type="button" id="heat-year-btn" onclick="setHeatRange('year')">年</button></span>
+        <div class="heat-legend"><span>less</span><div class="lg-cells" id="heat-lg"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span>more</span></div>
       </div>
     </div>
 
@@ -579,7 +594,9 @@ var I18N={
     appRecordLoading:'正在读取应用记录…', appRecordFailed:'应用记录读取失败', totalTime:'总时长', todayMetric:'今天', returns:'回返', peak:'高峰',
     touchResponses:'手感响应', keystrokesMetric:'键盘', mouseMetric:'鼠标', density:'手感密度', appTouchMap:'应用手感图', hourlyDistribution:'小时分布',
     dailyTime:'每日时长', windowTitles:'窗口标题', to:'至', perMin:'次/分', today:'今天', previousDay:'前一天', nextDay:'后一天',
-    hourDetail:'这一小时的回声', hourApps:'应用构成', noHourApps:'这一小时还没有明确应用构成。', week:'周', month:'月',
+    hourDetail:'这一小时的回声', hourApps:'应用构成', noHourApps:'这一小时还没有明确应用构成。', week:'周', month:'月', year:'年',
+    mediaSnapshot:'媒体素材', mediaSnapshotDesc:'生成选中日期的可复制快照。', mediaSnapshotLoading:'正在整理媒体素材…', mediaSnapshotFailed:'媒体素材生成失败',
+    copyDraft:'复制草稿', copied:'已复制', copyFailed:'复制失败', privacyBoundary:'隐私边界',
     language:'语言', chinese:'中文', english:'English', accent:'主题色', green:'传统绿', rose:'玫红', indigo:'靛蓝', ink:'墨色'
   },
   en:{
@@ -607,7 +624,9 @@ var I18N={
     appRecordLoading:'Reading app records...', appRecordFailed:'Failed to read app records', totalTime:'Total Time', todayMetric:'Today', returns:'Returns', peak:'Peak',
     touchResponses:'Touch Responses', keystrokesMetric:'Keys', mouseMetric:'Mouse', density:'Density', appTouchMap:'App Touch Map', hourlyDistribution:'Hourly',
     dailyTime:'Daily Time', windowTitles:'Window Titles', to:'to', perMin:'/min', today:'Today', previousDay:'Previous day', nextDay:'Next day',
-    hourDetail:'This Hour', hourApps:'App Mix', noHourApps:'No clear app mix for this hour yet.', week:'Week', month:'Month',
+    hourDetail:'This Hour', hourApps:'App Mix', noHourApps:'No clear app mix for this hour yet.', week:'Week', month:'Month', year:'Year',
+    mediaSnapshot:'Media Kit', mediaSnapshotDesc:'Create a copyable snapshot for the selected date.', mediaSnapshotLoading:'Preparing media copy...', mediaSnapshotFailed:'Failed to create media copy',
+    copyDraft:'Copy Draft', copied:'Copied', copyFailed:'Copy failed', privacyBoundary:'Privacy boundary',
     language:'Language', chinese:'中文', english:'English', accent:'Accent', green:'Classic Green', rose:'Rose', indigo:'Indigo', ink:'Ink'
   }
 };
@@ -640,6 +659,7 @@ function applyLanguage(){
   document.querySelector('.heat-label-static').textContent=t('heatmap');
   setText('heat-week-btn',t('week'));
   setText('heat-month-btn',t('month'));
+  setText('heat-year-btn',t('year'));
   var legend=document.querySelectorAll('.heat-legend span'); if(legend[0])legend[0].textContent=t('less'); if(legend[1])legend[1].textContent=t('more');
   document.querySelector('.sec-head h2').textContent=t('appRank');
   var empty=document.querySelector('.app-list .empty'); if(empty)empty.textContent=t('waiting');
@@ -662,6 +682,7 @@ function changeDate(delta){
   if(selectedDate>todayIso())selectedDate=todayIso();
   lastAppsLayoutSignature='';
   monthHeatmap=null;
+  yearHeatmap=null;
   updateDateControls();
   loadData();
 }
@@ -884,6 +905,55 @@ function openExport(){
     '</div>'
   );
 }
+async function copyText(text){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    return navigator.clipboard.writeText(text);
+  }
+  var ta=document.createElement('textarea');
+  ta.value=text;
+  ta.setAttribute('readonly','');
+  ta.style.position='fixed';
+  ta.style.left='-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  var ok=document.execCommand('copy');
+  ta.remove();
+  if(!ok)throw new Error('copy failed');
+}
+async function copyMediaSnapshot(){
+  var text=(document.getElementById('media-draft')||{}).value||'';
+  var state=document.getElementById('media-copy-state');
+  try{
+    await copyText(text);
+    if(state)state.textContent=t('copied');
+  }catch(e){
+    if(state)state.textContent=t('copyFailed');
+  }
+}
+async function openMediaSnapshot(){
+  showModal(t('mediaSnapshot'),'<div class="modal-loading">'+esc(t('mediaSnapshotLoading'))+'</div>','media-modal',{returnTo:'settings'});
+  try{
+    var r=await fetch('/api/media-snapshot?date='+encodeURIComponent(selectedDate));
+    var d=await r.json();
+    if(!r.ok)throw new Error('snapshot failed');
+    showModal(t('mediaSnapshot'),
+      '<div class="media-snapshot">'+
+        '<div class="media-headline">'+esc(d.headline||t('mediaSnapshot'))+'</div>'+
+        '<textarea class="media-draft" id="media-draft" spellcheck="false">'+esc(d.draft||'')+'</textarea>'+
+        '<div class="media-actions">'+
+          '<button class="settings-action" onclick="copyMediaSnapshot()"><b>'+esc(t('copyDraft'))+'</b><span>'+esc(t('mediaSnapshotDesc'))+'</span></button>'+
+          '<button class="settings-action" onclick="openSettings()"><b>'+esc(t('backSettings'))+'</b><span>'+esc(t('closePanel'))+'</span></button>'+
+        '</div>'+
+        '<div class="media-copy-state" id="media-copy-state"></div>'+
+        '<p class="muted"><b>'+esc(t('privacyBoundary'))+'</b> · '+esc(d.privacy_note||'')+'</p>'+
+      '</div>',
+      'media-modal',
+      {returnTo:'settings'}
+    );
+  }catch(e){
+    showModal(t('mediaSnapshot'),'<div class="modal-error">'+esc(t('mediaSnapshotFailed'))+'</div>','media-modal',{returnTo:'settings'});
+  }
+}
 var SETTINGS_DEFAULTS={auto_start:false,background_start:false,silent_start:false,auto_update_check:true,theme:'light',accent:'green',language:'zh',intro_seen:false};
 var SETTINGS_STATE=Object.assign({},SETTINGS_DEFAULTS);
 var settingsLoadPromise=null;
@@ -919,6 +989,18 @@ function renderSettings(settings){
   showModal(en?'Settings':'设置',
     '<div class="settings-panel">'+
       '<div class="settings-section">'+
+        '<h3>'+(en?'Appearance':'外观')+'</h3>'+
+        '<div class="setting-copy"><b>'+(en?'Theme':'明暗')+'</b><span>'+(en?'Choose light or dark first.':'先选择浅色或深色。')+'</span></div>'+
+        '<div class="theme-segment">'+
+          '<button class="theme-choice '+(getTheme()==='light'?'active':'')+'" data-theme-choice="light" onclick="setThemeChoice(&quot;light&quot;)">'+(en?'Light':'浅色')+'</button>'+
+          '<button class="theme-choice '+(getTheme()==='dark'?'active':'')+'" data-theme-choice="dark" onclick="setThemeChoice(&quot;dark&quot;)">'+(en?'Dark':'深色')+'</button>'+
+        '</div>'+
+        '<div class="setting-copy"><b>'+esc(t('accent'))+'</b><span>'+(en?'Then pick the accent color.':'再选择主题色。')+'</span></div>'+
+        accentChoices()+
+        '<div class="setting-copy"><b>'+esc(t('language'))+'</b><span>'+(en?'Switch the whole interface language.':'切换整个界面的显示语言。')+'</span></div>'+
+        languageChoices()+
+      '</div>'+
+      '<div class="settings-section">'+
         '<h3>'+(en?'Startup':'启动方式')+'</h3>'+
         '<div class="setting-row"><div class="setting-copy"><b>'+(en?'Launch at login':'开机自启')+'</b><span>'+(en?'Start automatically after signing in to Windows.':'登录 Windows 后自动运行。')+'</span></div>'+settingsToggle('auto_start')+'</div>'+
         '<div class="setting-row"><div class="setting-copy"><b>'+(en?'Silent start':'静默启动')+'</b><span>'+(en?'Start in tray without showing the window.':'自启时只进托盘，不弹主窗口。')+'</span></div>'+settingsToggle('silent_start')+'</div>'+
@@ -928,18 +1010,8 @@ function renderSettings(settings){
         '<div class="setting-row"><div class="setting-copy"><b>'+(en?'Check updates':'自动检查更新')+'</b><span>'+(en?'Lightweight update check after startup.':'启动后轻量检查，有新版时提醒。')+'</span></div>'+settingsToggle('auto_update_check')+'</div>'+
         '<div class="settings-actions">'+
           '<button class="settings-action" onclick="openExport()"><b>'+(en?'Export':'导出数据')+'</b><span>'+(en?'Last 30 days.':'最近 30 天记录。')+'</span></button>'+
+          '<button class="settings-action" onclick="openMediaSnapshot()"><b>'+esc(t('mediaSnapshot'))+'</b><span>'+esc(t('mediaSnapshotDesc'))+'</span></button>'+
           '<button class="settings-action" onclick="openUpdate()"><b>'+(en?'Updates':'检查更新')+'</b><span>'+(en?'Install when a new version appears.':'发现新版后安装。')+'</span></button>'+
-        '</div>'+
-      '</div>'+
-      '<div class="settings-section">'+
-        '<h3>'+(en?'Appearance':'外观')+'</h3>'+
-        '<div class="setting-copy"><b>'+esc(t('language'))+'</b><span>'+(en?'Switch the whole interface language.':'切换整个界面的显示语言。')+'</span></div>'+
-        languageChoices()+
-        '<div class="setting-copy"><b>'+esc(t('accent'))+'</b><span>'+(en?'Classic green is the default.':'默认使用更传统的绿色。')+'</span></div>'+
-        accentChoices()+
-        '<div class="theme-segment">'+
-          '<button class="theme-choice '+(getTheme()==='light'?'active':'')+'" data-theme-choice="light" onclick="setThemeChoice(&quot;light&quot;)">'+(en?'Light':'浅色')+'</button>'+
-          '<button class="theme-choice '+(getTheme()==='dark'?'active':'')+'" data-theme-choice="dark" onclick="setThemeChoice(&quot;dark&quot;)">'+(en?'Dark':'深色')+'</button>'+
         '</div>'+
       '</div>'+
     '</div>',
@@ -1265,6 +1337,7 @@ var WEEKDAYS_EN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 var heatmapDays=[];
 var heatRange='week';
 var monthHeatmap=null;
+var yearHeatmap=null;
 
 function weekdayLabel(date){
   var dt=new Date(date+'T00:00:00');
@@ -1286,20 +1359,23 @@ function selectedDayValue(day){
   return (includeKeyboard?(day.keyboard||0):0)+(includeMouse?(day.mouse||0):0);
 }
 function setHeatRange(range){
-  heatRange=range==='month'?'month':'week';
+  heatRange=range==='year'?'year':(range==='month'?'month':'week');
   document.getElementById('heat-week-btn')?.classList.toggle('active',heatRange==='week');
   document.getElementById('heat-month-btn')?.classList.toggle('active',heatRange==='month');
-  if(heatRange==='month'&&!monthHeatmap)loadMonthHeatmap();
+  document.getElementById('heat-year-btn')?.classList.toggle('active',heatRange==='year');
+  if(heatRange==='year'&&!yearHeatmap)loadYearHeatmap();
+  else if(heatRange==='month'&&!monthHeatmap)loadMonthHeatmap();
   else renderHeatmap();
 }
 function renderHeatmap(){
   try{
+    if(heatRange==='year')return renderYearHeatmap();
     if(heatRange==='month')return renderMonthHeatmap();
     var days=heatmapDays||[];
     var mx=1;
     for(var d=0;d<days.length;d++)for(var h=0;h<24;h++){var sv=selectedHeatValue(days[d],h);if(sv>mx)mx=sv;}
     var grid=document.getElementById('heat-grid'),hourLbl=document.getElementById('heat-day-labels'),dayLbl=document.getElementById('heat-hours-labels'),weekLbl=document.getElementById('heat-weekday-labels');
-    grid.classList.remove('month');
+    grid.classList.remove('month','year');
     var dayCount=Math.max(1,days.length||6);
     grid.style.setProperty('--heat-day-count',dayCount);
     dayLbl.style.setProperty('--heat-day-count',dayCount);
@@ -1341,9 +1417,7 @@ function renderHeatmap(){
         openHourDetail(cell.dataset.date,Number(cell.dataset.hour||0));
       });
     });
-    // Legend color cells
-    var lg=document.getElementById('heat-lg');
-    if(lg){var is=lg.querySelectorAll('i');for(var i=0;i<is.length;i++){is[i].style.background=heatColor(i===0?0:(mx*(i+1)/5),mx);}}
+    paintHeatLegend(mx);
   }catch(e){}
 }
 function renderMonthHeatmap(){
@@ -1352,6 +1426,7 @@ function renderMonthHeatmap(){
     var grid=document.getElementById('heat-grid'),dayLbl=document.getElementById('heat-hours-labels'),weekLbl=document.getElementById('heat-weekday-labels'),nowText=document.getElementById('heat-now-text');
     var mx=1;
     days.forEach(function(d){var v=selectedDayValue(d);if(v>mx)mx=v;});
+    grid.classList.remove('year');
     grid.classList.add('month');
     grid.style.removeProperty('--heat-day-count');
     dayLbl.innerHTML='';
@@ -1365,9 +1440,50 @@ function renderMonthHeatmap(){
       cell.addEventListener('mouseenter',function(){if(nowText)nowText.textContent=cell.dataset.tip||''});
       cell.addEventListener('mouseleave',function(){if(nowText)nowText.textContent=monthHeatmap?monthHeatmap.month:''});
     });
-    var lg=document.getElementById('heat-lg');
-    if(lg){var is=lg.querySelectorAll('i');for(var i=0;i<is.length;i++){is[i].style.background=heatColor(i===0?0:(mx*(i+1)/5),mx);}}
+    paintHeatLegend(mx);
   }catch(e){}
+}
+function monthLabel(month){
+  var p=String(month||'').split('-');
+  if(p.length!==2)return month||'';
+  var n=Number(p[1]);
+  var names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return getLang()==='en'?(names[n-1]||String(n)):(n+'月');
+}
+function renderYearHeatmap(){
+  try{
+    var months=(yearHeatmap&&yearHeatmap.months)||[];
+    var grid=document.getElementById('heat-grid'),dayLbl=document.getElementById('heat-hours-labels'),weekLbl=document.getElementById('heat-weekday-labels'),nowText=document.getElementById('heat-now-text');
+    var mx=1;
+    months.forEach(function(month){(month.days||[]).forEach(function(d){var v=selectedDayValue(d);if(v>mx)mx=v;})});
+    grid.classList.remove('month');
+    grid.classList.add('year');
+    grid.style.removeProperty('--heat-day-count');
+    dayLbl.innerHTML='';
+    if(weekLbl)weekLbl.innerHTML='';
+    if(nowText)nowText.textContent=yearHeatmap?yearHeatmap.year:'';
+    grid.innerHTML=months.map(function(month){
+      var cells=(month.days||[]).map(function(d){
+        var label=fmtDateLabel(d.date)+' · '+t('keyboardShort')+' '+fmtNum(d.keyboard||0)+' · '+t('mouseShort')+' '+fmtNum(d.mouse||0);
+        return '<div class="year-cell" style="background:'+heatColor(selectedDayValue(d),mx)+'" data-tip="'+tipAttr(label)+'" title="'+esc(label)+'"></div>';
+      }).join('');
+      return '<div class="year-month"><div class="year-month-grid">'+cells+'</div><div class="year-month-label">'+esc(monthLabel(month.month))+'</div></div>';
+    }).join('');
+    grid.querySelectorAll('.year-cell[data-tip]').forEach(function(cell){
+      cell.addEventListener('mouseenter',function(){if(nowText)nowText.textContent=cell.dataset.tip||''});
+      cell.addEventListener('mouseleave',function(){if(nowText)nowText.textContent=yearHeatmap?yearHeatmap.year:''});
+    });
+    paintHeatLegend(mx);
+  }catch(e){}
+}
+function paintHeatLegend(mx){
+  var lg=document.getElementById('heat-lg');
+  if(!lg)return;
+  var is=lg.querySelectorAll('i');
+  for(var i=0;i<is.length;i++){
+    var ratio=i===0?0:Math.pow(i/(is.length-1),1.35);
+    is[i].style.background=heatColor(mx*ratio,mx);
+  }
 }
 async function openHourDetail(date,hour){
   showModal(t('hourDetail'),'<div class="modal-loading">'+esc(t('readingStrength'))+'</div>');
@@ -1409,6 +1525,14 @@ async function loadMonthHeatmap(){
     var r=await fetch('/api/month-heatmap?month='+encodeURIComponent(month)),j=await r.json();
     monthHeatmap=j;
     renderMonthHeatmap();
+  }catch(e){}
+}
+async function loadYearHeatmap(){
+  try{
+    var year=selectedDate.slice(0,4);
+    var r=await fetch('/api/year-heatmap?year='+encodeURIComponent(year)),j=await r.json();
+    yearHeatmap=j;
+    renderYearHeatmap();
   }catch(e){}
 }
 
@@ -1511,7 +1635,9 @@ async function loadData() {
   }
   if(results[1].status==='fulfilled'){
     heatmapDays=results[1].value.data||[];
-    renderHeatmap();
+    if(heatRange==='year'&&!yearHeatmap)loadYearHeatmap();
+    else if(heatRange==='month'&&!monthHeatmap)loadMonthHeatmap();
+    else renderHeatmap();
     ok=true;
   }
   if(results[2].status==='fulfilled'){

@@ -46,6 +46,8 @@ class Handler(SimpleHTTPRequestHandler):
             self._json({"days": days, "data": Handler.db.heatmap_data(days, tomorrow, params.get("end", ""))})
         elif path == "/api/month-heatmap":
             self._json(Handler.db.month_heatmap(params.get("month", "")))
+        elif path == "/api/year-heatmap":
+            self._json(Handler.db.year_heatmap(params.get("year", "")))
         elif path == "/api/icon":
             from icons import icon_bytes
             raw_path = unquote(params.get("path", ""))
@@ -103,6 +105,11 @@ class Handler(SimpleHTTPRequestHandler):
             from datetime import datetime
             d = d or datetime.now().strftime("%Y-%m-%d")
             self._json(Handler.db.day_replay(d))
+        elif path == "/api/media-snapshot":
+            d = params.get("date", "")
+            from datetime import datetime
+            d = d or datetime.now().strftime("%Y-%m-%d")
+            self._json(Handler.db.media_snapshot(d))
         elif path == "/api/mimo-replay":
             d = params.get("date", "")
             from datetime import datetime
