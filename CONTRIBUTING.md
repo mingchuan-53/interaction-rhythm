@@ -17,11 +17,21 @@ pip install -r requirements.txt
 python main.py
 ```
 
+Windows PowerShell 5.1 会把无 BOM UTF-8 的 `.ps1` 文件按本地 ANSI 编码解析，遇到中文输出时可能出现乱码甚至脚本解析失败。开发时建议先让当前终端使用 UTF-8：
+
+```powershell
+chcp 65001
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+```
+
 打包：
 
 ```powershell
-.\build.ps1
+.\build.bat
 ```
+
+`build.bat` 会通过 `scripts/run_utf8_ps1.ps1` 以 UTF-8 方式执行打包脚本，避免 PowerShell 5.1 的编码坑。PowerShell 7 可以直接运行 `.\build.ps1`。
 
 ## 提交建议
 

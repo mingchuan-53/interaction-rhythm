@@ -7,7 +7,7 @@ echo   扣舷打包入口
 echo ========================================
 echo.
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0build.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\run_utf8_ps1.ps1" "%~dp0build.ps1"
 if errorlevel 1 (
   echo.
   echo [ERROR] 打包失败！
