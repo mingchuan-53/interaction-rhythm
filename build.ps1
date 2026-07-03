@@ -234,9 +234,9 @@ $manifest = [ordered]@{
   size = $shareZipSize
   published_at = $publishedAt
   notes = @(
-    '日期翻到前面时不再显示“今天”快捷项，只保留左右箭头和具体日期。',
-    '托盘图标启动时会重新生成，并使用独立临时文件避开 Windows 旧图标缓存。',
-    "当前版本为 $Version，已同步应用内、窗口、任务栏和托盘图标资源。"
+    '设置页把外观放到最上方，并按“明暗模式 → 主题色 → 语言”的顺序组织。',
+    '热力图新增年视图，由 12 张月视图组成；周 / 月 / 年切换迁移到底部左侧。',
+    '媒体素材入口可按选中日期生成 Markdown 快照草稿，便于后续制作图文和短视频内容。'
   )
 }
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $ManifestPath -Encoding UTF8
