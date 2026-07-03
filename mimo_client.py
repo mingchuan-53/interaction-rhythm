@@ -1,4 +1,4 @@
-"""MiMo-backed handfeel replay generation."""
+"""AI-backed handfeel replay generation."""
 import json
 import os
 import re
@@ -10,6 +10,10 @@ from datetime import datetime, timedelta
 
 DEFAULT_BASE_URL = "https://token-plan-cn.xiaomimimo.com/v1"
 DEFAULT_MODEL = "mimo-v2.5-pro"
+DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+DEFAULT_OLLAMA_MODEL = "gemma4:12b"
+DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
+DEFAULT_DEEPSEEK_MODEL = "deepseek-chat"
 
 # ── 文本净化 ──────────────────────────────────────────────
 TEXT_REPLACEMENTS = (
@@ -169,8 +173,8 @@ def _clean_url(base_url: str) -> str:
     return f"{base}/chat/completions"
 
 
-def _headers(api_key: str) -> dict:
-    header_mode = os.getenv("MIMO_AUTH_HEADER", "").strip().lower()
+def _headers(api_key: str, header_mode: str = "") -> dict:
+    header_mode = (header_mode or os.getenv("MIMO_AUTH_HEADER", "")).strip().lower()
     headers = {"Content-Type": "application/json"}
     if header_mode == "api-key":
         headers["api-key"] = api_key
@@ -180,6 +184,30 @@ def _headers(api_key: str) -> dict:
         headers["Authorization"] = f"Bearer {api_key}"
         headers["api-key"] = api_key
     return headers
+
+
+def _env_first(*names: str) -> str:
+    for name in names:
+        value = os.getenv(name, "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _provider_name(provider: str) -> str:
+    names = {
+        "ollama": "本地 Gemma",
+        "deepseek": "DeepSeek",
+        "openai": "OpenAI 兼容模型",
+        "mimo": "MiMo",
+    }
+    return names.get(provider, provider or "AI")
+
+
+def _provider_note(provider: str) -> str:
+    if provider == "ollama":
+        return "由本机 Ollama 模型根据聚合活动数据生成，记录不会离开本机。"
+    return f"由{_provider_name(provider)}根据本机聚合活动数据生成，不包含输入内容或窗口正文。"
 
 
 def _app_name(db, app: str) -> str:
@@ -428,13 +456,74 @@ def _fallback_parse(text: str) -> tuple[str, list[str]]:
     return conclusion, findings
 
 
-def _call_mimo(messages: list[dict]) -> str:
-    api_key = os.getenv("MIMO_API_KEY", "").strip()
-    if not api_key:
-        raise RuntimeError("未配置 MIMO_API_KEY")
-    model = os.getenv("MIMO_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
-    url = _clean_url(os.getenv("MIMO_BASE_URL", DEFAULT_BASE_URL))
-    timeout = int(os.getenv("MIMO_TIMEOUT", "60"))
+def _chat_text_from_response(data: dict) -> str:
+    try:
+        message = data["choices"][0]["message"]
+        return str(message.get("content") or message.get("reasoning_content") or "").strip()
+    except (KeyError, IndexError, TypeError, AttributeError):
+        pass
+    message = data.get("message") if isinstance(data, dict) else None
+    if isinstance(message, dict):
+        content = str(message.get("content") or "").strip()
+        if content:
+            return content
+        thinking = str(message.get("thinking") or "").strip()
+        if thinking:
+            cleaned = re.sub(r"^\s*(嗯|好|首先)[，,。]?.*?(?=\n\n|。)", "", thinking, flags=re.S).strip()
+            return cleaned or thinking
+    return ""
+
+
+def _ollama_available(base_url: str) -> bool:
+    try:
+        with urllib.request.urlopen(f"{base_url.rstrip('/')}/api/tags", timeout=2) as response:
+            return response.status == 200
+    except Exception:
+        return False
+
+
+def _call_ollama(messages: list[dict], model: str | None = None, base_url: str | None = None) -> str:
+    base = (base_url or os.getenv("OLLAMA_HOST") or os.getenv("KOUXIAN_OLLAMA_BASE_URL") or DEFAULT_OLLAMA_BASE_URL).strip().rstrip("/")
+    model = (model or os.getenv("KOUXIAN_OLLAMA_MODEL") or os.getenv("KOUXIAN_AI_MODEL") or DEFAULT_OLLAMA_MODEL).strip()
+    timeout = int(_env_first("KOUXIAN_AI_TIMEOUT", "OLLAMA_TIMEOUT") or "90")
+    payload = {
+        "model": model,
+        "messages": messages,
+        "stream": False,
+        "think": False,
+        "options": {
+            "temperature": 0.45,
+            "num_predict": 260,
+        },
+    }
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    request = urllib.request.Request(
+        f"{base}/api/chat",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            raw = response.read().decode("utf-8", errors="replace")
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Ollama 连接失败：{exc.reason}") from exc
+    data = json.loads(raw)
+    text = _chat_text_from_response(data)
+    if not text:
+        raise RuntimeError(f"Ollama 模型 {model} 返回为空")
+    return text
+
+
+def _call_openai_compatible(
+    messages: list[dict],
+    provider: str,
+    api_key: str,
+    base_url: str,
+    model: str,
+    header_mode: str = "authorization",
+) -> str:
+    timeout = int(_env_first("KOUXIAN_AI_TIMEOUT", "MIMO_TIMEOUT") or "60")
     payload = {
         "model": model,
         "messages": messages,
@@ -442,21 +531,78 @@ def _call_mimo(messages: list[dict]) -> str:
         "stream": False,
     }
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    request = urllib.request.Request(url, data=body, headers=_headers(api_key), method="POST")
+    request = urllib.request.Request(
+        _clean_url(base_url),
+        data=body,
+        headers=_headers(api_key, header_mode),
+        method="POST",
+    )
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             raw = response.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as exc:
         error_body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"MiMo API {exc.code}: {error_body[:240]}") from exc
+        raise RuntimeError(f"{_provider_name(provider)} API {exc.code}: {error_body[:240]}") from exc
     except urllib.error.URLError as exc:
-        raise RuntimeError(f"MiMo 连接失败：{exc.reason}") from exc
+        raise RuntimeError(f"{_provider_name(provider)}连接失败：{exc.reason}") from exc
 
     data = json.loads(raw)
-    try:
-        return data["choices"][0]["message"]["content"].strip()
-    except (KeyError, IndexError, TypeError) as exc:
-        raise RuntimeError("MiMo 返回格式无法识别") from exc
+    text = _chat_text_from_response(data)
+    if not text:
+        raise RuntimeError(f"{_provider_name(provider)}返回为空")
+    return text
+
+
+def _call_mimo(messages: list[dict]) -> str:
+    api_key = os.getenv("MIMO_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("未配置 MIMO_API_KEY")
+    model = os.getenv("MIMO_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    return _call_openai_compatible(
+        messages,
+        "mimo",
+        api_key,
+        os.getenv("MIMO_BASE_URL", DEFAULT_BASE_URL),
+        model,
+        os.getenv("MIMO_AUTH_HEADER", ""),
+    )
+
+
+def _select_ai_provider() -> tuple[str, str, str]:
+    requested = os.getenv("KOUXIAN_AI_PROVIDER", "").strip().lower()
+    ollama_base = (os.getenv("OLLAMA_HOST") or os.getenv("KOUXIAN_OLLAMA_BASE_URL") or DEFAULT_OLLAMA_BASE_URL).strip().rstrip("/")
+    if requested in {"ollama", "local", "gemma"}:
+        return "ollama", ollama_base, os.getenv("KOUXIAN_OLLAMA_MODEL", "").strip() or os.getenv("KOUXIAN_AI_MODEL", "").strip() or DEFAULT_OLLAMA_MODEL
+    if requested == "deepseek":
+        return "deepseek", os.getenv("DEEPSEEK_BASE_URL", DEFAULT_DEEPSEEK_BASE_URL), os.getenv("DEEPSEEK_MODEL", "").strip() or os.getenv("KOUXIAN_AI_MODEL", "").strip() or DEFAULT_DEEPSEEK_MODEL
+    if requested == "mimo":
+        return "mimo", os.getenv("MIMO_BASE_URL", DEFAULT_BASE_URL), os.getenv("MIMO_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    if requested in {"openai", "compatible"}:
+        return "openai", os.getenv("KOUXIAN_AI_BASE_URL", "").strip(), os.getenv("KOUXIAN_AI_MODEL", "").strip()
+    if _ollama_available(ollama_base):
+        return "ollama", ollama_base, os.getenv("KOUXIAN_OLLAMA_MODEL", "").strip() or os.getenv("KOUXIAN_AI_MODEL", "").strip() or DEFAULT_OLLAMA_MODEL
+    if _env_first("KOUXIAN_AI_API_KEY", "DEEPSEEK_API_KEY"):
+        return "deepseek", os.getenv("DEEPSEEK_BASE_URL", DEFAULT_DEEPSEEK_BASE_URL), os.getenv("DEEPSEEK_MODEL", "").strip() or os.getenv("KOUXIAN_AI_MODEL", "").strip() or DEFAULT_DEEPSEEK_MODEL
+    if os.getenv("MIMO_API_KEY", "").strip():
+        return "mimo", os.getenv("MIMO_BASE_URL", DEFAULT_BASE_URL), os.getenv("MIMO_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    return "ollama", ollama_base, DEFAULT_OLLAMA_MODEL
+
+
+def _call_ai(messages: list[dict]) -> tuple[str, str, str]:
+    provider, base_url, model = _select_ai_provider()
+    if provider == "ollama":
+        return _call_ollama(messages, model=model, base_url=base_url), provider, model
+    if provider == "deepseek":
+        api_key = _env_first("KOUXIAN_AI_API_KEY", "DEEPSEEK_API_KEY")
+        if not api_key:
+            raise RuntimeError("未配置 KOUXIAN_AI_API_KEY 或 DEEPSEEK_API_KEY")
+        return _call_openai_compatible(messages, provider, api_key, base_url, model or DEFAULT_DEEPSEEK_MODEL), provider, (model or DEFAULT_DEEPSEEK_MODEL)
+    if provider == "mimo":
+        return _call_mimo(messages), provider, (model or DEFAULT_MODEL)
+    api_key = _env_first("KOUXIAN_AI_API_KEY", "OPENAI_API_KEY")
+    if not api_key or not base_url or not model:
+        raise RuntimeError("未配置 KOUXIAN_AI_API_KEY、KOUXIAN_AI_BASE_URL 或 KOUXIAN_AI_MODEL")
+    return _call_openai_compatible(messages, provider, api_key, base_url, model), provider, model
 
 
 def mimo_day_replay(db, date: str | None = None) -> dict:
@@ -522,7 +668,7 @@ def mimo_day_replay(db, date: str | None = None) -> dict:
 
     user += "\n请写今天的数字手感回放。5-8句，每句不超过20字。只描述，不建议。"
 
-    raw_text = _call_mimo([
+    raw_text, provider, model = _call_ai([
         {"role": "system", "content": system},
         {"role": "user", "content": user},
     ])
@@ -543,14 +689,13 @@ def mimo_day_replay(db, date: str | None = None) -> dict:
     if not findings:
         findings = ["有效线索还不够集中。"]
 
-    model = os.getenv("MIMO_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
     return {
         "ok": True,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
-        "assistant": "MiMo 手感回放",
+        "assistant": f"{_provider_name(provider)}手感回放",
         "model": model,
-        "model_note": "由 MiMo 根据本机聚合数据生成，不包含输入内容或窗口正文。",
-        "provider": "mimo",
+        "model_note": _provider_note(provider),
+        "provider": provider,
         "interface": "GET /api/mimo-replay?date=YYYY-MM-DD",
         "scope": "day",
         "date": date,

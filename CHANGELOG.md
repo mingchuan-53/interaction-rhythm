@@ -2,6 +2,16 @@
 
 这个日志记录叩舷从 Type Tracker、交互节律到当前版本的主要产品变化。它不是逐条提交记录，而是按用户体验和技术方向整理的开发脉络。
 
+## 1.9.7
+
+定位：AI 默认可用版。让手感回放不再依赖用户进入界面配置模型或 Key。
+
+- AI 回放新增通用 provider 选择层，前端仍走同一个入口，后端自动选择可用模型。
+- 默认优先调用本机 Ollama 的 `gemma4:12b`，本地可用时记录不会离开本机。
+- 支持通过 `KOUXIAN_AI_PROVIDER`、`KOUXIAN_AI_API_KEY`、`DEEPSEEK_API_KEY`、`KOUXIAN_AI_BASE_URL` 和 `KOUXIAN_AI_MODEL` 接入 DeepSeek 或其他 OpenAI 兼容服务。
+- AI 弹窗文案从 MiMo 专名改为通用 AI，并展示后端返回的实际隐私说明。
+- 对 thinking 模型返回空 `content` 的情况做兼容，减少“分析成功但页面无内容”的失败感。
+
 ## 1.9.6
 
 定位：媒体素材快照版。为后续制作图文、短视频和发布说明准备一份可复制的当天手感素材。

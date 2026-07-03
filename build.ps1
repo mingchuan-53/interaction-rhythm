@@ -41,6 +41,20 @@ function Stop-ExistingApp {
   }
 }
 
+function Stop-PortOwner {
+  $owners = @(Get-NetTCPConnection -LocalPort 18923 -ErrorAction SilentlyContinue |
+    Where-Object { $_.OwningProcess -and $_.OwningProcess -ne $PID } |
+    Select-Object -ExpandProperty OwningProcess -Unique)
+  foreach ($owner in $owners) {
+    $process = Get-Process -Id $owner -ErrorAction SilentlyContinue
+    if ($process) {
+      Write-Host "  正在停止占用本地服务端口的进程: $($process.ProcessName) ($owner)" -ForegroundColor DarkYellow
+      Stop-Process -Id $owner -Force -ErrorAction SilentlyContinue
+    }
+  }
+  if ($owners.Count -gt 0) { Start-Sleep -Milliseconds 700 }
+}
+
 function Remove-TreeWithRetry([string]$Path) {
   if (-not (Test-Path $Path)) { return }
   $lastError = $null
@@ -60,6 +74,9 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  扣舷 v$Version 打包脚本" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
+
+Stop-ExistingApp
+Stop-PortOwner
 
 # [1/6] 准备目录
 Write-Host "[1/6] 准备目录..." -ForegroundColor Yellow
@@ -234,9 +251,9 @@ $manifest = [ordered]@{
   size = $shareZipSize
   published_at = $publishedAt
   notes = @(
-    '设置页把外观放到最上方，并按“明暗模式 → 主题色 → 语言”的顺序组织。',
-    '热力图新增年视图，由 12 张月视图组成；周 / 月 / 年切换迁移到底部左侧。',
-    '媒体素材入口可按选中日期生成 Markdown 快照草稿，便于后续制作图文和短视频内容。'
+    'AI 回放默认优先调用本机 Ollama/Gemma，不需要进入界面配置即可分析。',
+    '支持通过环境变量接入 DeepSeek 或其他 OpenAI 兼容服务，云端模式只发送聚合统计。',
+    'AI 弹窗改为通用文案，并展示实际模型的隐私说明。'
   )
 }
 $manifestJson = ($manifest | ConvertTo-Json -Depth 5) + [Environment]::NewLine

@@ -24,8 +24,7 @@ def main() -> int:
         root=args.root,
         include_current_dist=args.include_current_dist,
     )
-    for path in written:
-        print(path)
+    print(f"generated {len(written)} icon assets")
     return 0
 
 
