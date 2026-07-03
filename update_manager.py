@@ -1,4 +1,4 @@
-"""交互节律一键更新管理。"""
+"""扣舷一键更新管理。"""
 from __future__ import annotations
 
 import hashlib
@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 import config
+from diagnostics import log_event, log_exception
 
 
 class UpdateError(RuntimeError):
@@ -93,6 +94,7 @@ def _http_json(url: str) -> dict[str, Any]:
     if not url:
         raise UpdateError("还没有配置更新清单地址")
     req = urllib.request.Request(url, headers={"User-Agent": f"InteractionRhythm/{config.APP_VERSION}"})
+    log_event("update_manifest_request", {"url": url})
     with urllib.request.urlopen(req, timeout=config.UPDATE_TIMEOUT) as resp:
         status = getattr(resp, "status", None) or resp.getcode() or 200
         if status >= 400:
@@ -157,10 +159,19 @@ def check_update() -> dict[str, Any]:
     url = _manifest_url()
     if not url:
         return {"ok": True, "manifest": _unconfigured_manifest(), "cached": False, "checking": False}
-    raw = _http_json(url)
-    manifest = _normalize_manifest(raw)
-    _write_update_cache(raw)
-    return {"ok": True, "manifest": manifest, "cached": False, "checking": False, "checked_at": time.time()}
+    try:
+        raw = _http_json(url)
+        manifest = _normalize_manifest(raw)
+        _write_update_cache(raw)
+        log_event("update_manifest_checked", {
+            "latest": manifest.get("latest"),
+            "current": manifest.get("current"),
+            "has_update": manifest.get("has_update"),
+        })
+        return {"ok": True, "manifest": manifest, "cached": False, "checking": False, "checked_at": time.time()}
+    except Exception as exc:
+        log_exception("update_manifest_failed", exc, {"url": url})
+        raise
 
 
 def _manifest_from_cache(cache: dict[str, Any] | None) -> tuple[dict[str, Any] | None, float]:
@@ -185,7 +196,8 @@ def _background_check_update() -> None:
     global _CHECKING
     try:
         check_update()
-    except Exception:
+    except Exception as exc:
+        log_exception("update_background_check_failed", exc)
         pass
     finally:
         with _CHECK_LOCK:
@@ -246,12 +258,14 @@ def _download(url: str, target: Path) -> None:
     if tmp.exists():
         tmp.unlink()
     req = urllib.request.Request(url, headers={"User-Agent": f"InteractionRhythm/{config.APP_VERSION}"})
+    log_event("update_download_started", {"url": url, "target": target})
     with urllib.request.urlopen(req, timeout=config.UPDATE_TIMEOUT) as resp, tmp.open("wb") as f:
         status = getattr(resp, "status", None) or resp.getcode() or 200
         if status >= 400:
             raise UpdateError(f"更新包下载失败：HTTP {status}")
         shutil.copyfileobj(resp, f)
     tmp.replace(target)
+    log_event("update_download_finished", {"target": target, "size": target.stat().st_size})
 
 
 def _prepare_staging(manifest: dict[str, Any]) -> UpdatePackage:
@@ -260,15 +274,17 @@ def _prepare_staging(manifest: dict[str, Any]) -> UpdatePackage:
     zip_path = root / f"InteractionRhythm-v{version}.zip"
     staging_dir = root / f"staging-v{version}"
 
-    _download(manifest["download_url"], zip_path)
-    expected = manifest.get("sha256") or ""
-    if expected and _sha256(zip_path).lower() != expected:
-        raise UpdateError("更新包校验失败，sha256 不匹配")
-
-    if staging_dir.exists():
-        shutil.rmtree(staging_dir)
-    staging_dir.mkdir(parents=True, exist_ok=True)
     try:
+        _download(manifest["download_url"], zip_path)
+        expected = manifest.get("sha256") or ""
+        actual = _sha256(zip_path).lower()
+        if expected and actual != expected:
+            raise UpdateError("更新包校验失败，sha256 不匹配")
+        log_event("update_package_verified", {"version": version, "sha256": actual})
+
+        if staging_dir.exists():
+            shutil.rmtree(staging_dir)
+        staging_dir.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(zip_path) as zf:
             base = staging_dir.resolve()
             for member in zf.infolist():
@@ -279,9 +295,14 @@ def _prepare_staging(manifest: dict[str, Any]) -> UpdatePackage:
                     raise UpdateError("更新包包含不安全路径")
             zf.extractall(staging_dir)
     except zipfile.BadZipFile as exc:
+        log_exception("update_package_bad_zip", exc, {"version": version, "zip_path": zip_path})
         raise UpdateError("更新包不是有效 zip 文件") from exc
+    except Exception as exc:
+        log_exception("update_prepare_staging_failed", exc, {"version": version, "zip_path": zip_path})
+        raise
 
     if not _find_new_exe(staging_dir):
+        log_event("update_package_missing_exe", {"version": version, "staging_dir": staging_dir})
         raise UpdateError("更新包里没有找到 InteractionRhythm.exe")
     return UpdatePackage(manifest=manifest, zip_path=zip_path, staging_dir=staging_dir)
 
@@ -310,8 +331,15 @@ $Source = {json.dumps(str(source_root), ensure_ascii=False)}
 $Backup = {json.dumps(str(backup), ensure_ascii=False)}
 $Exe = {json.dumps(str(exe), ensure_ascii=False)}
 $Log = Join-Path {json.dumps(str(updates_dir()), ensure_ascii=False)} "last-update.log"
+$State = Join-Path {json.dumps(str(updates_dir()), ensure_ascii=False)} "last-update-state.json"
 function Log($m) {{ Add-Content -LiteralPath $Log -Value ("[{0}] {{1}}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $m) -Encoding UTF8 }}
+function State($s, $m) {{
+  [ordered]@{{ ts = (Get-Date -Format "yyyy-MM-dd HH:mm:ss"); state = $s; message = $m; target = $Target; source = $Source; backup = $Backup }} |
+    ConvertTo-Json -Depth 4 |
+    Set-Content -LiteralPath $State -Encoding UTF8
+}}
 try {{
+  State "started" "update started"
   Log "update started"
   Start-Sleep -Milliseconds 1200
   $ProcessNames = @("InteractionRhythm", "TypeTracker")
@@ -328,14 +356,17 @@ try {{
   if (Test-Path $Data) {{
     Copy-Item -LiteralPath $Data -Destination $DataBackup -Recurse -Force
     Log "user data preserved"
+    State "data_preserved" "user data copied to backup"
   }}
   Get-ChildItem -LiteralPath $Target -Force | Where-Object {{ $_.Name -ne "data" }} | ForEach-Object {{
     Move-Item -LiteralPath $_.FullName -Destination $Backup -Force
   }}
+  State "program_backed_up" "program files moved to backup"
 
   Get-ChildItem -LiteralPath $Source -Force | Where-Object {{ $_.Name -ne "data" }} | ForEach-Object {{
     Copy-Item -LiteralPath $_.FullName -Destination $Target -Recurse -Force
   }}
+  State "program_copied" "new program files copied"
   if (-not (Test-Path $Data)) {{ New-Item -Path $Data -ItemType Directory -Force | Out-Null }}
   if (Test-Path $DataBackup) {{
     Get-ChildItem -LiteralPath $DataBackup -Force | ForEach-Object {{
@@ -344,7 +375,7 @@ try {{
   }}
   $SourceData = Join-Path $Source "data"
   if (Test-Path $SourceData) {{
-    foreach ($name in @("update-url.txt","交互节律.ico","interaction-rhythm-title.png")) {{
+    foreach ($name in @("update-url.txt","交互节律.ico","叩舷.ico","扣舷.ico","interaction-rhythm-title.png")) {{
       $sourceItem = Join-Path $SourceData $name
       if (Test-Path $sourceItem) {{
         Copy-Item -LiteralPath $sourceItem -Destination $Data -Recurse -Force
@@ -360,10 +391,12 @@ try {{
   }}
 
   Start-Process -FilePath $Exe -WorkingDirectory $Target
+  State "finished" "update finished"
   Log "update finished"
   try {{ Remove-Item -LiteralPath $Backup -Recurse -Force }} catch {{}}
 }} catch {{
   Log ("update failed: " + $_.Exception.Message)
+  State "failed" ($_.Exception.Message)
   try {{
     if (Test-Path $Backup) {{
       Get-ChildItem -LiteralPath $Backup -Force | Where-Object {{ $_.Name -ne "data-preserved" }} | ForEach-Object {{
@@ -376,6 +409,7 @@ try {{
         }}
       }}
       Start-Process -FilePath $Exe -WorkingDirectory $Target
+      State "rolled_back" "previous version restored"
     }}
   }} catch {{}}
 }}
@@ -393,16 +427,22 @@ def install_update_async(manifest: dict[str, Any], shutdown_callback) -> dict[st
     if not manifest["has_update"]:
         return {"ok": True, "message": "已经是最新版本"}
 
-    package = _prepare_staging(manifest)
-    script = _write_updater(package)
-    subprocess.Popen([
-        "powershell.exe",
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        str(script),
-    ], cwd=str(app_root()), close_fds=True)
+    try:
+        log_event("update_install_requested", {"latest": manifest.get("latest")})
+        package = _prepare_staging(manifest)
+        script = _write_updater(package)
+        subprocess.Popen([
+            "powershell.exe",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(script),
+        ], cwd=str(app_root()), close_fds=True)
+        log_event("update_updater_launched", {"script": script, "latest": manifest.get("latest")})
+    except Exception as exc:
+        log_exception("update_install_prepare_failed", exc, {"latest": manifest.get("latest")})
+        raise
 
     def _shutdown():
         time.sleep(0.4)

@@ -62,7 +62,7 @@ SPI_GETWORKAREA = 0x0030
 SM_CXSCREEN = 0
 SM_CYSCREEN = 1
 WINDOW_WIDTH = 520
-WINDOW_HEIGHT = 585
+WINDOW_HEIGHT = 860
 TITLEBAR_HEIGHT = 40
 
 class RECT(ctypes.Structure):
@@ -376,7 +376,7 @@ def create_window(port: int, icon_path: str = None, title_icon_path: str = None,
                 ai_btn = _button("AI", bold=True, font_size=8)
 
                 tips = WinForms.ToolTip()
-                tips.SetToolTip(ai_btn, "AI 分析")
+                tips.SetToolTip(ai_btn, "MiMo 回放")
                 tips.SetToolTip(settings_btn, "设置")
                 tips.SetToolTip(min_btn, "最小化")
                 tips.SetToolTip(close_btn, "隐藏到托盘")
@@ -401,7 +401,7 @@ def create_window(port: int, icon_path: str = None, title_icon_path: str = None,
                     _run_js("openSettings()")
 
                 def _insights(sender, args):
-                    _run_js("openInsights()")
+                    _run_js("openMimoInsights()")
 
                 min_btn.Click += _minimize
                 close_btn.Click += _close

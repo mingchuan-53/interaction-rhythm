@@ -1,4 +1,4 @@
-"""交互节律 — 主入口（原生桌面客户端）"""
+"""扣舷 — 主入口（原生桌面客户端）"""
 import sys
 import os
 import signal
@@ -7,6 +7,7 @@ from pathlib import Path
 from urllib.request import urlopen
 
 from config import PORT, APP_NAME, APP_MUTEX_NAME, DB_RETENTION_DAYS, HOURLY_RETENTION_DAYS
+from diagnostics import log_event, log_exception
 from db import DB
 from stats import StatsServer
 
@@ -36,6 +37,49 @@ def data_path() -> Path:
 DB_PATH = data_path() / "tracker.db"
 
 
+def legacy_database_candidates() -> list[Path]:
+    """Find old tracker.db files from installed and portable-era layouts."""
+    candidates = []
+    app_root = data_path().parent
+    candidates.extend([
+        app_root / "data" / "tracker.db",
+        Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "InteractionRhythm" / "data" / "tracker.db",
+        Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "TypeTracker" / "data" / "tracker.db",
+        Path(os.environ.get("APPDATA", "")) / "InteractionRhythm" / "tracker.db",
+        Path(os.environ.get("APPDATA", "")) / "TypeTracker" / "tracker.db",
+    ])
+
+    source_root = Path(__file__).parent
+    for base in (
+        source_root / "data",
+        source_root / "dist" / "current" / "InteractionRhythm" / "data",
+        source_root / "dist" / "build" / "InteractionRhythm" / "data",
+    ):
+        candidates.append(base / "tracker.db")
+    for parent in (
+        source_root / "dist" / "releases",
+        source_root / "dist" / "archive",
+    ):
+        if parent.exists():
+            candidates.extend(parent.glob("**/data/tracker.db"))
+
+    seen = set()
+    result = []
+    current = str(DB_PATH.resolve())
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except OSError:
+            continue
+        key = str(resolved)
+        if key == current or key in seen:
+            continue
+        seen.add(key)
+        if resolved.exists():
+            result.append(resolved)
+    return result
+
+
 def local_server_healthy(timeout: float = 0.12) -> bool:
     try:
         with urlopen(f"http://127.0.0.1:{PORT}/api/today", timeout=timeout) as response:
@@ -45,7 +89,7 @@ def local_server_healthy(timeout: float = 0.12) -> bool:
 
 
 def set_windows_app_id():
-    """让 Windows 任务栏把进程归到交互节律，而不是 python.exe。"""
+    """让 Windows 任务栏把进程归到扣舷，而不是 python.exe。"""
     if os.name != "nt":
         return
     try:
@@ -165,11 +209,14 @@ def restore_existing_window(retries: int = 0, delay: float = 0.2, require_server
 def main():
     set_windows_app_id()
     background_start = any(arg in ("--background", "--hidden", "--tray") for arg in sys.argv[1:])
+    log_event("startup_begin", {"background": background_start, "argv": sys.argv[1:]})
     if not acquire_single_instance_lock():
+        log_event("startup_existing_instance", {"background": background_start})
         if not background_start:
             restore_existing_window(retries=10, delay=0.1, require_server=False)
         return
     if not background_start and restore_existing_window(retries=0, delay=0.05):
+        log_event("startup_existing_window_restored")
         return
     print(f"[{APP_NAME}] 启动中...")
 
@@ -212,29 +259,41 @@ def main():
 
     def shutdown(*_):
         print(f"\n[{APP_NAME}] 关闭中...")
+        log_event("shutdown_begin")
         if tracker:
             tracker.stop()
         if server:
             server.stop()
+        try:
+            db.checkpoint()
+            db.close()
+        except Exception as e:
+            log_exception("shutdown_db_close_failed", e)
         print(f"[{APP_NAME}] 已退出")
+        log_event("shutdown_finished")
         sys.exit(0)
 
     def exit_for_update():
         print(f"\n[{APP_NAME}] 准备安装更新...")
+        log_event("update_shutdown_begin")
         try:
             if tracker:
                 tracker.stop()
-        except Exception:
+        except Exception as e:
+            log_exception("update_shutdown_tracker_failed", e)
             pass
         try:
             if server:
                 server.stop()
-        except Exception:
+        except Exception as e:
+            log_exception("update_shutdown_server_failed", e)
             pass
         try:
             db.checkpoint()
-        except Exception:
+        except Exception as e:
+            log_exception("update_shutdown_checkpoint_failed", e)
             pass
+        log_event("update_shutdown_exit")
         os._exit(0)
 
     try:
@@ -255,17 +314,41 @@ def main():
             ensure_tracker_started()
         except Exception as e:
             print(f"[{APP_NAME}] 记录器启动失败: {e}")
+            log_exception("tracker_start_failed", e)
 
     threading.Thread(target=start_tracker_async, daemon=True).start()
 
+    def import_legacy_async():
+        import time
+        time.sleep(1.2 if background_start else 2.5)
+        try:
+            candidates = legacy_database_candidates()
+            results = db.import_legacy_databases(candidates)
+            imported = [
+                item for item in results
+                if not item.get("skipped") and not item.get("error")
+                and sum(int(item.get(key) or 0) for key in (
+                    "keystrokes", "mouse_events", "app_usage", "app_paths", "app_interactions", "insight_history"
+                )) > 0
+            ]
+            if imported:
+                log_event("legacy_data_imported", {"sources": len(imported), "results": imported})
+                db.checkpoint()
+        except Exception as e:
+            print(f"[{APP_NAME}] 旧数据继承跳过: {e}")
+            log_exception("legacy_import_skipped", e)
+
+    threading.Thread(target=import_legacy_async, daemon=True).start()
+
     def cleanup_async():
         import time
-        time.sleep(8)
+        time.sleep(12)
         try:
             db.cleanup(DB_RETENTION_DAYS, HOURLY_RETENTION_DAYS)
             db.checkpoint()
         except Exception as e:
             print(f"[{APP_NAME}] 历史数据清理跳过: {e}")
+            log_exception("cleanup_skipped", e)
 
     threading.Thread(target=cleanup_async, daemon=True).start()
 
@@ -273,6 +356,7 @@ def main():
     signal.signal(signal.SIGTERM, shutdown)
 
     print(f"[{APP_NAME}] 已启动  http://127.0.0.1:{PORT}")
+    log_event("server_started", {"port": PORT})
 
     # 启动系统托盘（后台加载，避免拖慢窗口显示）
     def start_tray_async():
@@ -294,6 +378,7 @@ def main():
             tray_start()
         except Exception as e:
             print(f"[{APP_NAME}] 托盘启动失败: {e}")
+            log_exception("tray_start_failed", e)
             try:
                 import traceback
                 (data_path() / "tray-error.log").write_text(traceback.format_exc(), encoding="utf-8")
@@ -325,6 +410,7 @@ def main():
                 make_ico(str(icon_path))
             except Exception as e:
                 print(f"[{APP_NAME}] 图标生成失败: {e}")
+                log_exception("icon_generate_failed", e)
                 icon_path = None
         if not title_icon_path.exists():
             try:
@@ -332,6 +418,7 @@ def main():
                 make_icon(96).save(title_icon_path, "PNG")
             except Exception as e:
                 print(f"[{APP_NAME}] 标题栏图标生成失败: {e}")
+                log_exception("title_icon_generate_failed", e)
                 title_icon_path = None
 
     # 主线程：原生桌面窗口（阻塞直到窗口关闭）
@@ -346,6 +433,7 @@ def main():
         window_start()  # 阻塞主线程
     except Exception as e:
         print(f"[{APP_NAME}] 窗口启动失败: {e}")
+        log_exception("window_start_failed", e)
 
     # 窗口关闭后清理
     shutdown()
@@ -362,4 +450,5 @@ if __name__ == "__main__":
         else:
             log_path = Path(__file__).parent / "startup-error.log"
         log_path.write_text(traceback.format_exc(), encoding="utf-8")
+        log_exception("startup_crashed", sys.exc_info()[1])
         raise

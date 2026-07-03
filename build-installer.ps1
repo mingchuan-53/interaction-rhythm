@@ -1,4 +1,4 @@
-# 交互节律安装器构建脚本
+# 扣舷安装器构建脚本
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
@@ -24,10 +24,26 @@ if (-not (Test-Path $CurrentExe)) {
 
 $env:INTERACTION_RHYTHM_VERSION = $Version
 $InstallerScript = Join-Path $PSScriptRoot "installer\interaction-rhythm.iss"
-& $IsccCandidates[0] $InstallerScript
+$InstallerName = "interaction-rhythm-setup-v$Version.exe"
+$InstallerBaseName = [IO.Path]::GetFileNameWithoutExtension($InstallerName)
+$TempInstallerBaseName = "$InstallerBaseName-build-$([DateTime]::Now.ToString('yyyyMMddHHmmss'))"
+$ReleaseRoot = Join-Path $PSScriptRoot "dist\releases"
+New-Item -ItemType Directory -Force -Path $ReleaseRoot | Out-Null
+
+& $IsccCandidates[0] "/O$ReleaseRoot" "/F$TempInstallerBaseName" $InstallerScript
 if ($LASTEXITCODE -ne 0) {
   Write-Host "安装器构建失败。" -ForegroundColor Red
   exit $LASTEXITCODE
 }
 
-Write-Host "安装器构建完成: installer\output\interaction-rhythm-setup-v$Version.exe" -ForegroundColor Green
+$TempInstallerPath = Join-Path $ReleaseRoot "$TempInstallerBaseName.exe"
+$ReleaseInstallerPath = Join-Path $ReleaseRoot $InstallerName
+Copy-Item -Force $TempInstallerPath $ReleaseInstallerPath
+Remove-Item -Force $TempInstallerPath
+
+$InstallerOutput = Join-Path $PSScriptRoot "installer\output"
+New-Item -ItemType Directory -Force -Path $InstallerOutput | Out-Null
+Copy-Item -Force $ReleaseInstallerPath (Join-Path $InstallerOutput $InstallerName)
+
+Write-Host "安装器构建完成: dist\releases\$InstallerName" -ForegroundColor Green
+Write-Host "已同步到: installer\output\$InstallerName" -ForegroundColor Green

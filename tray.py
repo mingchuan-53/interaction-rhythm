@@ -1,75 +1,22 @@
 """系统托盘图标与应用图标生成。"""
 from pathlib import Path
-from PIL import Image, ImageDraw
+from PIL import Image
 
 import config
 
 
 def make_icon(size: int = 256) -> Image.Image:
-    """生成高清节律方格图标。"""
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    pad = max(1, int(size * 0.075))
-    r = max(3, int(size * 0.19))
-    shadow = max(1, int(size * 0.018))
-    draw.rounded_rectangle(
-        [pad + shadow, pad + shadow, size - pad + shadow, size - pad + shadow],
-        radius=r,
-        fill=(20, 83, 45, 42),
-    )
-    draw.rounded_rectangle(
-        [pad, pad, size - pad, size - pad],
-        radius=r,
-        fill=(239, 248, 241),
-    )
-    draw.rounded_rectangle(
-        [pad, pad, size - pad, size - pad],
-        radius=r,
-        outline=(20, 83, 45, 220),
-        width=max(1, size // 28),
-    )
+    """从项目母版生成指定尺寸的应用图标。"""
+    from icon_assets import make_icon_image
 
-    grid = 2 if size <= 24 else 3 if size <= 48 else 4
-    inner = int(size * (0.25 if grid == 2 else 0.20 if grid == 3 else 0.17))
-    gap = max(1, int(size * (0.06 if grid == 2 else 0.045 if grid == 3 else 0.035)))
-    cell = max(2, (size - pad * 2 - inner * 2 - gap * (grid - 1)) // grid)
-    x0 = pad + inner
-    y0 = pad + inner
-    palette = [
-        (187, 247, 208, 255), (134, 239, 172, 255), (74, 222, 128, 255), (34, 197, 94, 255),
-        (22, 163, 74, 255), (21, 128, 61, 255), (22, 101, 52, 255), (20, 83, 45, 255),
-        (166, 226, 185, 255), (86, 211, 132, 255), (39, 174, 96, 255), (27, 120, 63, 255),
-        (210, 245, 220, 255), (115, 226, 155, 255), (31, 145, 76, 255), (18, 96, 52, 255),
-    ]
-    if grid == 2:
-        colors = [palette[3], palette[5], palette[1], palette[7]]
-    elif grid == 3:
-        colors = [palette[i] for i in (12, 2, 5, 1, 6, 10, 4, 8, 7)]
-    else:
-        colors = palette
-
-    for row in range(grid):
-        for col in range(grid):
-            x = x0 + col * (cell + gap)
-            y = y0 + row * (cell + gap)
-            draw.rounded_rectangle(
-                [x, y, x + cell, y + cell],
-                radius=max(1, int(cell * 0.22)),
-                fill=colors[row * grid + col],
-            )
-    return img
+    return make_icon_image(size)
 
 
 def make_ico(ico_path: str):
     """生成 .ico 文件（多分辨率）。"""
-    sizes = [16, 32, 48, 64, 128, 256]
-    imgs = [make_icon(s) for s in sizes]
-    imgs[-1].save(
-        ico_path,
-        format="ICO",
-        append_images=imgs[:-1],
-        sizes=[(s, s) for s in sizes],
-    )
+    from icon_assets import write_ico
+
+    write_ico(ico_path)
 
 
 def create_tray(tracker, port: int, shutdown_callback=None):
@@ -253,15 +200,22 @@ def create_tray(tracker, port: int, shutdown_callback=None):
         def __init__(self):
             self.hwnd = None
             self.hicon = None
+            self._icon_file = None
             self._class_name = f"InteractionRhythmTray{os.getpid()}"
             self._hinstance = kernel32.GetModuleHandleW(None)
             self._wndproc = WNDPROC(self._window_proc)
             self._deleted = False
 
         def _icon_path(self):
-            path = Path(tempfile.gettempdir()) / "interaction-rhythm-tray.ico"
-            if not path.exists() or path.stat().st_size < 1024:
-                make_ico(str(path))
+            temp_dir = Path(tempfile.gettempdir())
+            for stale in temp_dir.glob("kouxian-tray*.ico"):
+                try:
+                    stale.unlink()
+                except OSError:
+                    pass
+            path = temp_dir / f"kouxian-tray-{os.getpid()}.ico"
+            make_ico(str(path))
+            self._icon_file = path
             return str(path)
 
         def _make_nid(self, flags=0, tooltip=None):
@@ -321,7 +275,7 @@ def create_tray(tracker, port: int, shutdown_callback=None):
             if not menu:
                 return
             try:
-                user32.AppendMenuW(menu, MF_STRING, ID_OPEN, "交互节律")
+                user32.AppendMenuW(menu, MF_STRING, ID_OPEN, config.APP_NAME)
                 user32.AppendMenuW(menu, MF_STRING, ID_REFRESH, "刷新数据")
                 user32.AppendMenuW(menu, MF_STRING, ID_QUIT, "退出后台")
                 point = wintypes.POINT()
@@ -382,6 +336,11 @@ def create_tray(tracker, port: int, shutdown_callback=None):
                 try:
                     user32.DestroyIcon(self.hicon)
                 except Exception:
+                    pass
+            if self._icon_file:
+                try:
+                    self._icon_file.unlink()
+                except OSError:
                     pass
 
     icon = NativeTrayIcon()

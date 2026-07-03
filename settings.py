@@ -8,12 +8,29 @@ import winreg
 
 
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
-RUN_VALUE_NAME = "交互节律"
+RUN_VALUE_NAME = "扣舷"
+LEGACY_RUN_VALUE_NAMES = ("叩舷", "交互节律")
 DEFAULT_SETTINGS = {
     "auto_start": False,
     "background_start": False,
     "silent_start": False,
     "auto_update_check": True,
+    "theme": "light",
+    "accent": "green",
+    "language": "zh",
+    "intro_seen": False,
+}
+BOOL_SETTING_KEYS = (
+    "auto_start",
+    "background_start",
+    "silent_start",
+    "auto_update_check",
+    "intro_seen",
+)
+CHOICE_SETTINGS = {
+    "theme": {"light", "dark"},
+    "accent": {"green", "rose", "indigo", "ink"},
+    "language": {"zh", "en"},
 }
 
 
@@ -40,9 +57,13 @@ def _load_file_settings() -> dict:
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
             if isinstance(raw, dict):
-                for key in DEFAULT_SETTINGS:
+                for key in BOOL_SETTING_KEYS:
                     if key in raw:
                         data[key] = bool(raw[key])
+                for key, allowed in CHOICE_SETTINGS.items():
+                    value = str(raw.get(key, "")).strip()
+                    if value in allowed:
+                        data[key] = value
         except Exception:
             pass
     return data
@@ -76,20 +97,34 @@ def _launcher_command(background: bool = False) -> str:
 def _read_run_value() -> str:
     if os.name != "nt":
         return ""
+    names = (RUN_VALUE_NAME, *LEGACY_RUN_VALUE_NAMES)
     try:
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_READ) as key:
-            value, _ = winreg.QueryValueEx(key, RUN_VALUE_NAME)
-            return str(value or "")
+            for name in names:
+                try:
+                    value, _ = winreg.QueryValueEx(key, name)
+                    if value:
+                        return str(value)
+                except FileNotFoundError:
+                    continue
+                except OSError:
+                    continue
     except FileNotFoundError:
-        return ""
+        pass
     except OSError:
-        return ""
+        pass
+    return ""
 
 
 def _write_run_value(command: str) -> None:
     if os.name != "nt":
         return
     with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
+        for legacy_name in LEGACY_RUN_VALUE_NAMES:
+            try:
+                winreg.DeleteValue(key, legacy_name)
+            except OSError:
+                pass
         winreg.SetValueEx(key, RUN_VALUE_NAME, 0, winreg.REG_SZ, command)
 
 
@@ -98,7 +133,11 @@ def _delete_run_value() -> None:
         return
     try:
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
-            winreg.DeleteValue(key, RUN_VALUE_NAME)
+            for name in (RUN_VALUE_NAME, *LEGACY_RUN_VALUE_NAMES):
+                try:
+                    winreg.DeleteValue(key, name)
+                except OSError:
+                    pass
     except FileNotFoundError:
         pass
     except OSError:
@@ -121,9 +160,13 @@ def get_settings() -> dict:
 def save_settings(patch: dict) -> dict:
     data = get_settings()
     if isinstance(patch, dict):
-        for key in DEFAULT_SETTINGS:
+        for key in BOOL_SETTING_KEYS:
             if key in patch:
                 data[key] = bool(patch[key])
+        for key, allowed in CHOICE_SETTINGS.items():
+            value = str(patch.get(key, "")).strip()
+            if value in allowed:
+                data[key] = value
         if "silent_start" in patch:
             data["background_start"] = bool(patch["silent_start"])
         elif "background_start" in patch:

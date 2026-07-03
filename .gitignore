@@ -16,6 +16,7 @@ data/
 *.db
 *.db-wal
 *.db-shm
+.tmp-chrome-*/
 
 # Build artifacts
 app.ico
@@ -24,6 +25,7 @@ startup-error.log
 source-test.*
 .build-data-backup/
 debug-*.png
+artifacts/
 installer/output/
 installer/temp/
 

@@ -1,9 +1,9 @@
-# 交互节律打包脚本 (PowerShell)
+# 扣舷打包脚本 (PowerShell)
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
 $AppExeName = "InteractionRhythm"
-$AppDisplayName = "交互节律"
+$AppDisplayName = "扣舷"
 $LegacyExeName = "TypeTracker"
 $PythonExe = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
 $PyInstallerExe = Join-Path $PSScriptRoot ".venv\Scripts\pyinstaller.exe"
@@ -57,7 +57,7 @@ function Remove-TreeWithRetry([string]$Path) {
 }
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  交互节律 v$Version 打包脚本" -ForegroundColor Cyan
+Write-Host "  扣舷 v$Version 打包脚本" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -91,7 +91,7 @@ if (Test-Path "app.ico") { Remove-Item -Force "app.ico" }
 
 # [2/6] 生成图标
 Write-Host "[2/6] 生成应用图标..." -ForegroundColor Yellow
-& $PythonExe -c "from tray import make_ico; make_ico('app.ico')"
+& $PythonExe "scripts\generate_icons.py" --source "assets\kouxian-icon-source.png" --root "."
 if ($LASTEXITCODE -ne 0) { Write-Host "图标生成失败！" -ForegroundColor Red; exit 1 }
 
 # [3/6] PyInstaller 打包
@@ -103,10 +103,14 @@ Write-Host "[3/6] 使用 PyInstaller 打包..." -ForegroundColor Yellow
   --workpath build `
   --name $AppExeName `
   --icon app.ico `
+  --add-data "assets\kouxian-icon-source.png;assets" `
   --add-data "static;static" `
   --hidden-import webview `
+  --hidden-import icon_assets `
   --hidden-import update_manager `
+  --hidden-import diagnostics `
   --hidden-import settings `
+  --hidden-import mimo_client `
   --hidden-import clr `
   --hidden-import System `
   --exclude-module PIL.AvifImagePlugin `
@@ -134,7 +138,9 @@ if ($LASTEXITCODE -ne 0) { Write-Host "打包失败！" -ForegroundColor Red; ex
 Write-Host "[4/6] 写入运行数据和启动器..." -ForegroundColor Yellow
 New-Item -Path "$BuildDir\data" -ItemType Directory -Force | Out-Null
 Copy-Item -Path "app.ico" -Destination "$BuildDir\$AppExeName.ico" -Force
-Copy-Item -Path "app.ico" -Destination "$BuildDir\data\$AppDisplayName.ico" -Force
+foreach ($dataIconName in @("$AppDisplayName.ico", "叩舷.ico", "交互节律.ico")) {
+  Copy-Item -Path "app.ico" -Destination "$BuildDir\data\$dataIconName" -Force
+}
 & $PythonExe -c "from tray import make_icon; make_icon(96).save(r'$BuildDir\data\interaction-rhythm-title.png', 'PNG')"
 $includeData = $env:TYPETRACKER_INCLUDE_DATA -ne "0"
 if ((Test-Path $BackupDataDir) -and $includeData) {
@@ -143,7 +149,9 @@ if ((Test-Path $BackupDataDir) -and $includeData) {
     $legacyDataPath = Join-Path "$BuildDir\data" $legacyDataFile
     if (Test-Path $legacyDataPath) { Remove-Item -Force $legacyDataPath }
   }
-  Copy-Item -Path "app.ico" -Destination "$BuildDir\data\$AppDisplayName.ico" -Force
+  foreach ($dataIconName in @("$AppDisplayName.ico", "叩舷.ico", "交互节律.ico")) {
+    Copy-Item -Path "app.ico" -Destination "$BuildDir\data\$dataIconName" -Force
+  }
   & $PythonExe -c "from tray import make_icon; make_icon(96).save(r'$BuildDir\data\interaction-rhythm-title.png', 'PNG')"
   try {
     & $PythonExe -c "import sqlite3; p=r'dist\build\InteractionRhythm\data\tracker.db'; c=sqlite3.connect(p); c.execute('PRAGMA wal_checkpoint(TRUNCATE)'); c.execute('VACUUM'); c.close()"
@@ -175,6 +183,13 @@ $releaseName = "$AppExeName-v$Version"
 $releaseDir = Join-Path $ReleaseRoot $releaseName
 Remove-TreeWithRetry $releaseDir
 Copy-Item -Path $BuildDir -Destination $releaseDir -Recurse -Force
+Remove-TreeWithRetry "$releaseDir\data"
+New-Item -Path "$releaseDir\data" -ItemType Directory -Force | Out-Null
+Copy-Item -Path "$BuildDir\data\update-url.txt" -Destination "$releaseDir\data\update-url.txt" -Force
+foreach ($dataIconName in @("$AppDisplayName.ico", "叩舷.ico", "交互节律.ico")) {
+  Copy-Item -Path "$BuildDir\data\$dataIconName" -Destination "$releaseDir\data\$dataIconName" -Force
+}
+Copy-Item -Path "$BuildDir\data\interaction-rhythm-title.png" -Destination "$releaseDir\data\interaction-rhythm-title.png" -Force
 
 $legacyCleanDir = Join-Path $ReleaseRoot "$releaseName-clean"
 $legacyCleanZip = Join-Path $ReleaseRoot "$releaseName-clean.zip"
@@ -186,7 +201,12 @@ $shareDir = Join-Path $ReleaseRoot $AppDisplayName
 Remove-TreeWithRetry $shareDir
 Copy-Item -Path $BuildDir -Destination $shareDir -Recurse -Force
 Remove-TreeWithRetry "$shareDir\data"
-New-Item -Path "$shareDir\data\icons" -ItemType Directory -Force | Out-Null
+New-Item -Path "$shareDir\data" -ItemType Directory -Force | Out-Null
+Copy-Item -Path "$BuildDir\data\update-url.txt" -Destination "$shareDir\data\update-url.txt" -Force
+foreach ($dataIconName in @("$AppDisplayName.ico", "叩舷.ico", "交互节律.ico")) {
+  Copy-Item -Path "$BuildDir\data\$dataIconName" -Destination "$shareDir\data\$dataIconName" -Force
+}
+Copy-Item -Path "$BuildDir\data\interaction-rhythm-title.png" -Destination "$shareDir\data\interaction-rhythm-title.png" -Force
 
 $shareZip = Join-Path $ReleaseRoot "$AppDisplayName.zip"
 if (Test-Path $shareZip) { Remove-Item -Force $shareZip }
@@ -214,31 +234,43 @@ $manifest = [ordered]@{
   size = $shareZipSize
   published_at = $publishedAt
   notes = @(
-    "检查更新改为先读本地状态，后台静默确认，设置页不再等待网络。",
-    "更新安装会保留并备份本地记录，减少升级后显示重新计数的问题。",
-    "修正升级后缓存短暂显示旧版本号的问题。"
+    '日期翻到前面时不再显示“今天”快捷项，只保留左右箭头和具体日期。',
+    '托盘图标启动时会重新生成，并使用独立临时文件避开 Windows 旧图标缓存。',
+    "当前版本为 $Version，已同步应用内、窗口、任务栏和托盘图标资源。"
   )
 }
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $ManifestPath -Encoding UTF8
 
-# [6/6] 创建桌面快捷方式
-Write-Host "[6/6] 创建桌面快捷方式..." -ForegroundColor Yellow
-$desktopPath = [Environment]::GetFolderPath("Desktop")
-$shell = New-Object -ComObject WScript.Shell
-
-foreach ($old in @("TypeTracker.lnk", "InteractionRhythm.lnk")) {
-  $oldPath = Join-Path $desktopPath $old
-  if (Test-Path $oldPath) {
-    Move-Item -Path $oldPath -Destination (Join-Path $ArchiveRoot $old) -Force
-  }
+Write-Host "  发布包预检..." -ForegroundColor Yellow
+$PreflightReport = Join-Path $ReleaseRoot "preflight-v$Version.json"
+& $PythonExe "scripts\preflight_release.py" --release-root $ReleaseRoot --version $Version --json-report $PreflightReport
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "发布包预检失败，已停止。" -ForegroundColor Red
+  exit $LASTEXITCODE
 }
 
-$shortcut = $shell.CreateShortcut((Join-Path $desktopPath "$AppDisplayName.lnk"))
-$shortcut.TargetPath = "$CurrentDir\$AppExeName.exe"
-$shortcut.WorkingDirectory = $CurrentDir
-$shortcut.IconLocation = "$CurrentDir\$AppExeName.ico,0"
-$shortcut.Description = "$AppDisplayName - 键鼠响应与应用节律"
-$shortcut.Save()
+# [6/6] 桌面快捷方式
+Write-Host "[6/6] 桌面快捷方式..." -ForegroundColor Yellow
+$desktopPath = [Environment]::GetFolderPath("Desktop")
+if ($env:INTERACTION_RHYTHM_CREATE_DEV_SHORTCUT -eq "1") {
+  $shell = New-Object -ComObject WScript.Shell
+
+  foreach ($old in @("TypeTracker.lnk", "InteractionRhythm.lnk", "交互节律.lnk", "叩舷.lnk")) {
+    $oldPath = Join-Path $desktopPath $old
+    if (Test-Path $oldPath) {
+      Move-Item -Path $oldPath -Destination (Join-Path $ArchiveRoot $old) -Force
+    }
+  }
+
+  $shortcut = $shell.CreateShortcut((Join-Path $desktopPath "$AppDisplayName.lnk"))
+  $shortcut.TargetPath = "$CurrentDir\$AppExeName.exe"
+  $shortcut.WorkingDirectory = $CurrentDir
+  $shortcut.IconLocation = "$CurrentDir\$AppExeName.ico,0"
+  $shortcut.Description = "$AppDisplayName - 数字手感与应用强度"
+  $shortcut.Save()
+} else {
+  Write-Host "  已跳过开发版桌面快捷方式，避免误指向 dist\current 数据目录。" -ForegroundColor DarkYellow
+}
 
 try {
   $iconRefresh = Join-Path $env:windir "System32\ie4uinit.exe"
@@ -257,5 +289,9 @@ Write-Host "  历史发布版: dist\releases\$releaseName\" -ForegroundColor Gre
 Write-Host "  朋友测试包: dist\releases\$AppDisplayName.zip" -ForegroundColor Green
 Write-Host "  GitHub 发布包: dist\releases\interaction-rhythm.zip" -ForegroundColor Green
 Write-Host "  更新清单: dist\releases\update.json" -ForegroundColor Green
-Write-Host "  桌面快捷方式: $desktopPath\$AppDisplayName.lnk" -ForegroundColor Green
+if ($env:INTERACTION_RHYTHM_CREATE_DEV_SHORTCUT -eq "1") {
+  Write-Host "  桌面快捷方式: $desktopPath\$AppDisplayName.lnk" -ForegroundColor Green
+} else {
+  Write-Host "  桌面快捷方式: 未改动" -ForegroundColor Green
+}
 Write-Host "========================================" -ForegroundColor Green

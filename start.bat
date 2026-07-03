@@ -1,5 +1,5 @@
 @echo off
-title 交互节律
+title 扣舷
 cd /d "%~dp0"
 
 :: Check Python
@@ -12,7 +12,7 @@ if errorlevel 1 (
 
 :: Install deps if needed
 if not exist ".venv" (
-    echo [交互节律] First run - installing dependencies...
+    echo [扣舷] First run - installing dependencies...
     python -m venv .venv
     call .venv\Scripts\activate.bat
     pip install -r requirements.txt
@@ -21,6 +21,6 @@ if not exist ".venv" (
 )
 
 :: Run
-echo [交互节律] Starting...
+echo [扣舷] Starting...
 python main.py
 pause

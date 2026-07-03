@@ -1,15 +1,15 @@
-"""交互节律全局配置"""
+"""扣舷全局配置"""
 import os
 
-APP_NAME = "交互节律"
-APP_ICON_TEXT = "节"
-APP_VERSION = "1.7.1"
+APP_NAME = "扣舷"
+APP_ICON_TEXT = "扣"
+APP_VERSION = "1.9.5"
 APP_MUTEX_NAME = os.getenv("INTERACTION_RHYTHM_MUTEX_NAME", r"Local\Mingchuan.InteractionRhythm.SingleInstance")
 
 PORT = 18923
 POLL_INTERVAL = 0.5
 BATCH_INTERVAL = 1
-DB_RETENTION_DAYS = 30
+DB_RETENTION_DAYS = int(os.getenv("INTERACTION_RHYTHM_RETENTION_DAYS", "3650"))
 HEATMAP_DAYS = 6
 HOURLY_RETENTION_DAYS = 180
 

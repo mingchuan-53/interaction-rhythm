@@ -35,20 +35,30 @@ class Handler(SimpleHTTPRequestHandler):
 
         if path == "/api/today":
             self._json(Handler.db.today_stats())
+        elif path == "/api/day":
+            d = params.get("date", "")
+            from datetime import datetime
+            d = d or datetime.now().strftime("%Y-%m-%d")
+            self._json(Handler.db.day_stats(d))
         elif path == "/api/heatmap":
             days = _safe_int(params.get("days", "7"), 7)
             tomorrow = params.get("tomorrow", "0") == "1"
-            self._json({"days": days, "data": Handler.db.heatmap_data(days, tomorrow)})
+            self._json({"days": days, "data": Handler.db.heatmap_data(days, tomorrow, params.get("end", ""))})
+        elif path == "/api/month-heatmap":
+            self._json(Handler.db.month_heatmap(params.get("month", "")))
         elif path == "/api/icon":
             from icons import icon_bytes
             raw_path = unquote(params.get("path", ""))
             # 安全检查：只允许绝对路径，拒绝路径穿越
-            if not raw_path or ".." in raw_path or len(raw_path) > 500:
+            icon_path = Path(raw_path)
+            if not raw_path or ".." in raw_path or len(raw_path) > 500 or not icon_path.is_absolute():
                 self.send_error(400)
                 return
             data = icon_bytes(raw_path)
             if not data:
-                self.send_error(404)
+                self.send_response(404)
+                self.send_header("Cache-Control", "public, max-age=900")
+                self.end_headers()
                 return
             self.send_response(200)
             self.send_header("Content-Type", "image/png")
@@ -61,6 +71,12 @@ class Handler(SimpleHTTPRequestHandler):
             from datetime import datetime
             d = d or datetime.now().strftime("%Y-%m-%d")
             self._json({"date": d, "hourly": Handler.db.hourly_chart(d)})
+        elif path == "/api/hour-detail":
+            d = params.get("date", "")
+            from datetime import datetime
+            d = d or datetime.now().strftime("%Y-%m-%d")
+            hour = _safe_int(params.get("hour", "0"), 0, 0, 23)
+            self._json(Handler.db.hour_detail(d, hour))
         elif path == "/api/apps":
             d = params.get("date", "")
             from datetime import datetime
@@ -82,6 +98,20 @@ class Handler(SimpleHTTPRequestHandler):
                 self._download_csv(data)
             else:
                 self._download_json(data)
+        elif path == "/api/day-replay":
+            d = params.get("date", "")
+            from datetime import datetime
+            d = d or datetime.now().strftime("%Y-%m-%d")
+            self._json(Handler.db.day_replay(d))
+        elif path == "/api/mimo-replay":
+            d = params.get("date", "")
+            from datetime import datetime
+            d = d or datetime.now().strftime("%Y-%m-%d")
+            try:
+                from mimo_client import mimo_day_replay
+                self._json(mimo_day_replay(Handler.db, d))
+            except Exception as e:
+                self._json({"ok": False, "error": str(e), "fallback": Handler.db.day_replay(d)})
         elif path == "/api/insights":
             days = _safe_int(params.get("days", "7"), 7)
             self._json(Handler.db.insights(days))
@@ -169,7 +199,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _download_json(self, data):
         body = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
-        name = f"interaction-rhythm-{data['range']['start']}-{data['range']['end']}.json"
+        name = f"kouxian-{data['range']['start']}-{data['range']['end']}.json"
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Disposition", f'attachment; filename="{name}"')
@@ -210,7 +240,7 @@ class Handler(SimpleHTTPRequestHandler):
                 session.get("path", ""), "", "", "", session["seconds"],
             ])
         body = ("\ufeff" + out.getvalue()).encode("utf-8")
-        name = f"interaction-rhythm-{data['range']['start']}-{data['range']['end']}.csv"
+        name = f"kouxian-{data['range']['start']}-{data['range']['end']}.csv"
         self.send_response(200)
         self.send_header("Content-Type", "text/csv; charset=utf-8")
         self.send_header("Content-Disposition", f'attachment; filename="{name}"')

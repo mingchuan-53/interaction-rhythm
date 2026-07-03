@@ -4,12 +4,14 @@ from __future__ import annotations
 import ctypes
 import hashlib
 import sys
+import time
 from ctypes import wintypes
 from pathlib import Path
 
 from PIL import Image
 
 ICON_SIZE = 32
+FAIL_TTL_SECONDS = 6 * 3600
 SHGFI_ICON = 0x000000100
 SHGFI_LARGEICON = 0x000000000
 DI_NORMAL = 0x0003
@@ -67,6 +69,27 @@ def _cache_path(exe_path: Path) -> Path:
         mtime = 0
     key = f"{str(exe_path).lower()}|{mtime}".encode("utf-8", "ignore")
     return _data_dir() / f"{hashlib.sha1(key).hexdigest()}.png"
+
+
+def _fail_path(cache_path: Path) -> Path:
+    return cache_path.with_suffix(".fail")
+
+
+def _recent_failure(cache_path: Path) -> bool:
+    fail = _fail_path(cache_path)
+    try:
+        return fail.is_file() and time.time() - fail.stat().st_mtime < FAIL_TTL_SECONDS
+    except OSError:
+        return False
+
+
+def _mark_failure(cache_path: Path):
+    try:
+        fail = _fail_path(cache_path)
+        fail.parent.mkdir(parents=True, exist_ok=True)
+        fail.write_text(str(int(time.time())), encoding="utf-8")
+    except OSError:
+        pass
 
 
 def _configure_win32():
@@ -192,9 +215,14 @@ def icon_bytes(exe_path: str) -> bytes | None:
     cache = _cache_path(path)
     if cache.is_file():
         return cache.read_bytes()
+    if _recent_failure(cache):
+        return None
     try:
         if _extract_icon(path, cache) and cache.is_file():
+            _fail_path(cache).unlink(missing_ok=True)
             return cache.read_bytes()
     except Exception:
+        _mark_failure(cache)
         return None
+    _mark_failure(cache)
     return None

@@ -3,39 +3,75 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-  <meta name="theme-color" content="#0d1216">
-  <meta name="description" content="键盘、鼠标响应和应用使用节律观察器">
-  <title>交互节律</title>
+  <meta name="theme-color" content="#f7f7f7">
+  <meta name="description" content="不读取内容的数字手感与应用强度观察器">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <title>扣舷</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     :root{
-      --green-400:#4ade80;--green-500:#20b95a;--green-600:#15803d;
-      --amber:#c26a12;--amber-light:#f59e0b;--sky:#0e7490;--sky-light:#22d3ee;
-      --violet:#6d5bd0;--violet-light:#9b8df0;--teal:#0f8f83;
-      --r:10px;--r-sm:7px;--heat-cell:15px;--heat-gap:2px;--heat-day-gap:2px;--heat-day-count:6;
+      --trad-green-300:#9fd5b5;--trad-green-400:#60b67f;--trad-green-500:#2f8f59;--trad-green-600:#1f6f43;
+      --rose-200:#ffc6cf;--rose-300:#f79bad;--rose-400:#ef7489;--rose-500:#e75d74;--rose-600:#d74860;
+      --ink:#171717;--ink-soft:#3b3b3b;--muted:#777b82;--faint:#aeb2b8;
+      --blue:#3f6fd9;--mint:#18a06f;--amber:#d08a19;--violet:#7164d8;
+      --r:8px;--r-sm:7px;--heat-cell:13px;--heat-gap:3px;--heat-day-gap:var(--heat-gap);--heat-day-count:6;
+      --heat-day-width:calc(var(--heat-cell) * 4 + var(--heat-gap) * 3);
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
       --safe-left: env(safe-area-inset-left, 0px);
       --safe-right: env(safe-area-inset-right, 0px);
     }
     html{
-      --bg:#0d1216;--surface:#121a20;--surface-hover:#18242b;--surface-raised:#1d2931;
-      --border:rgba(255,255,255,.07);--border-hover:rgba(255,255,255,.13);
-      --text:#e8ece9;--text2:#97a39c;--text3:#69786f;--text4:#465149;
-      --primary:var(--green-500);--primary-dim:rgba(34,197,94,.12);
-      --bar-bg:rgba(255,255,255,.05);
-      --heat-empty:#1f272c;--heat-1:#0f3325;--heat-2:#125c37;--heat-3:#1f8b4f;--heat-4:#2fba66;--heat-5:#55d37a;--heat-6:#86efac;
-      font-family:'LXGW WenKai','霞鹜文楷','LXGW WenKai Screen','Microsoft YaHei',system-ui,sans-serif;
+      --bg:#f7f7f7;--surface:#ffffff;--surface-hover:#fafafa;--surface-raised:#ffffff;
+      --border:rgba(23,23,23,.07);--border-hover:rgba(23,23,23,.14);
+      --text:var(--ink);--text2:var(--ink-soft);--text3:var(--muted);--text4:var(--faint);
+      --primary:var(--trad-green-500);--primary-strong:var(--trad-green-600);--primary-dim:#edf8f0;
+      --bar-bg:#eeeeee;--shadow:0 10px 28px rgba(24,24,24,.07);--shadow-sm:0 5px 16px rgba(24,24,24,.055);
+      --heat-empty:#f1f1f1;--heat-1:#e5f5e9;--heat-2:#c6e9d0;--heat-3:#9fd5b5;--heat-4:#60b67f;--heat-5:#2f8f59;--heat-6:#1f6f43;
+      font-family:'Inter','SF Pro Display','Segoe UI','Microsoft YaHei',system-ui,sans-serif;
       background:var(--bg);color:var(--text);height:100%;-webkit-font-smoothing:antialiased;
       overflow:hidden;
     }
     html[data-theme="light"]{
-      --bg:#f4f6f5;--surface:#ffffff;--surface-hover:#f7faf8;--surface-raised:#ffffff;
-      --border:rgba(24,35,29,.075);--border-hover:rgba(24,35,29,.14);
-      --text:#18231d;--text2:#52665b;--text3:#84958d;--text4:#aebbb5;
-      --primary:var(--green-600);--primary-dim:rgba(21,128,61,.085);
-      --bar-bg:rgba(32,52,41,.055);
-      --heat-empty:#ecefed;--heat-1:#dff6e7;--heat-2:#b8ecc8;--heat-3:#7edb9d;--heat-4:#48c774;--heat-5:#20a95a;--heat-6:#126a3b;
+      --bg:#f7f7f7;--surface:#ffffff;--surface-hover:#fafafa;--surface-raised:#ffffff;
+      --border:rgba(23,23,23,.07);--border-hover:rgba(23,23,23,.14);
+      --text:var(--ink);--text2:var(--ink-soft);--text3:var(--muted);--text4:var(--faint);
+      --primary:var(--trad-green-500);--primary-strong:var(--trad-green-600);--primary-dim:#edf8f0;
+      --bar-bg:#eeeeee;
+      --heat-empty:#f1f1f1;--heat-1:#e5f5e9;--heat-2:#c6e9d0;--heat-3:#9fd5b5;--heat-4:#60b67f;--heat-5:#2f8f59;--heat-6:#1f6f43;
+    }
+    html[data-theme="dark"]{
+      --bg:#151515;--surface:#202020;--surface-hover:#282828;--surface-raised:#252525;
+      --border:rgba(255,255,255,.08);--border-hover:rgba(255,255,255,.16);
+      --text:#f5f5f5;--text2:#dedede;--text3:#a7a7a7;--text4:#777;
+      --primary:#7bd19b;--primary-strong:#a7e3bb;--primary-dim:rgba(123,209,155,.15);
+      --bar-bg:rgba(255,255,255,.09);--shadow:0 14px 34px rgba(0,0,0,.32);--shadow-sm:0 7px 18px rgba(0,0,0,.26);
+      --heat-empty:#2b2b2b;--heat-1:#173523;--heat-2:#205238;--heat-3:#2e754d;--heat-4:#429d67;--heat-5:#62bf83;--heat-6:#a7e3bb;
+    }
+    html[data-accent="rose"]{
+      --primary:var(--rose-500);--primary-strong:var(--rose-600);--primary-dim:#fff1f3;
+      --heat-empty:#f1f1f1;--heat-1:#ffe7eb;--heat-2:#ffc6cf;--heat-3:#f79bad;--heat-4:#ef7489;--heat-5:#e75d74;--heat-6:#bf2f49;
+    }
+    html[data-theme="dark"][data-accent="rose"]{
+      --primary:#ff8ea0;--primary-strong:#ffadba;--primary-dim:rgba(255,142,160,.15);
+      --heat-empty:#2b2b2b;--heat-1:#4a222b;--heat-2:#6d303d;--heat-3:#974253;--heat-4:#c5576c;--heat-5:#ef7489;--heat-6:#ffc0cb;
+    }
+    html[data-accent="indigo"]{
+      --primary:#4f68d7;--primary-strong:#344caf;--primary-dim:#eef1ff;
+      --heat-empty:#f1f1f1;--heat-1:#e6eaff;--heat-2:#cbd4ff;--heat-3:#9dabf5;--heat-4:#7386e6;--heat-5:#4f68d7;--heat-6:#2d3f98;
+    }
+    html[data-theme="dark"][data-accent="indigo"]{
+      --primary:#92a3ff;--primary-strong:#b7c2ff;--primary-dim:rgba(146,163,255,.15);
+      --heat-empty:#2b2b2b;--heat-1:#252b52;--heat-2:#30396e;--heat-3:#46529b;--heat-4:#6274d4;--heat-5:#92a3ff;--heat-6:#c9d1ff;
+    }
+    html[data-accent="ink"]{
+      --primary:#2f3437;--primary-strong:#171717;--primary-dim:#eeeeee;
+      --heat-empty:#f1f1f1;--heat-1:#e5e5e5;--heat-2:#cfcfcf;--heat-3:#a8a8a8;--heat-4:#777;--heat-5:#444;--heat-6:#171717;
+    }
+    html[data-theme="dark"][data-accent="ink"]{
+      --primary:#e5e5e5;--primary-strong:#fff;--primary-dim:rgba(255,255,255,.12);
+      --heat-empty:#2b2b2b;--heat-1:#3a3a3a;--heat-2:#555;--heat-3:#777;--heat-4:#aaa;--heat-5:#d0d0d0;--heat-6:#fff;
     }
     body{
       height:100%;overflow:hidden;display:flex;flex-direction:column;
@@ -45,78 +81,105 @@
     }
     
     .wrap{
-      width:520px;max-width:100%;flex:1;display:flex;flex-direction:column;
-      padding:12px 12px calc(12px + var(--safe-bottom));
-      gap:10px;min-height:0;overflow-y:auto;overflow-x:hidden;margin:0 auto;
-      -webkit-overflow-scrolling: touch;
+      width:520px;max-width:100%;height:100%;flex:1;display:grid;
+      grid-template-rows:42px 50px 56px minmax(160px,1fr) 430px;
+      padding:12px 14px calc(12px + var(--safe-bottom));
+      gap:9px;min-height:0;overflow:hidden;margin:0 auto;
     }
     body.nativebar .header{display:none}
-    body.nativebar .wrap{padding-top:11px}
+    body.nativebar .wrap{padding-top:11px;grid-template-rows:50px 56px minmax(160px,1fr) 430px}
 
     /* ── Header ─────────────────── */
-    .header{display:flex;align-items:center;gap:8px;flex-shrink:0;height:28px}
+    .header{display:flex;align-items:center;gap:10px;flex-shrink:0;height:42px}
     .title-area{height:100%;display:flex;align-items:center;gap:8px;flex:1;min-width:0}
     .title-area.window-drag{cursor:grab}
     .title-area.window-drag:active{cursor:grabbing}
-    .logo{width:25px;height:25px;border-radius:7px;background:linear-gradient(135deg,#126a3b,var(--green-400));display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0}
-    .header h1{font-size:15px;font-weight:700;letter-spacing:-.3px;flex-shrink:0}
+    .logo{width:31px;height:31px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:var(--shadow-sm);overflow:hidden}
+    .logo img{width:31px;height:31px;display:block;object-fit:cover}
+    .brand-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
+    .header h1{font-size:22px;font-weight:850;letter-spacing:0;flex-shrink:0;line-height:1}
+    .brand-copy span{font-size:11px;color:var(--text4);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
     .spacer{flex:1}
     .status{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text3)}
-    .dot{width:5px;height:5px;border-radius:50%;background:var(--green-500);box-shadow:0 0 6px rgba(34,197,94,.4);animation:pulse 2s infinite}
+    .dot{width:5px;height:5px;border-radius:50%;background:var(--primary);box-shadow:0 0 6px color-mix(in srgb,var(--primary) 38%,transparent);animation:pulse 2s infinite}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-    .theme-btn{width:25px;height:25px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s}
+    .theme-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .16s;box-shadow:var(--shadow-sm)}
     .theme-btn:hover{border-color:var(--border-hover);background:var(--surface-hover)}
-    .tool-btn{width:25px;height:25px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
-    .tool-btn:hover{border-color:var(--border-hover);background:var(--surface-hover);color:var(--text)}
-    .tool-btn svg{width:13px;height:13px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
-    .window-btn{display:none;width:25px;height:25px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;align-items:center;justify-content:center;transition:all .15s}
+    .tool-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .16s;box-shadow:var(--shadow-sm)}
+    .tool-btn:hover{border-color:var(--border-hover);background:var(--surface-hover);color:var(--text);transform:translateY(-1px)}
+    .tool-btn svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .lang-btn{min-width:34px;padding:0 8px;font-size:11px;font-weight:850;letter-spacing:.02em}
+    .window-btn{display:none;width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;align-items:center;justify-content:center;transition:all .16s;box-shadow:var(--shadow-sm)}
     body.is-desktop .window-btn{display:flex}
-    .window-btn svg{width:13px;height:13px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
-    .window-btn:hover{border-color:var(--border-hover);background:var(--surface-hover);color:var(--text)}
+    .window-btn svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .window-btn:hover{border-color:var(--border-hover);background:var(--surface-hover);color:var(--text);transform:translateY(-1px)}
     .window-btn.close:hover{border-color:rgba(220,38,38,.25);background:rgba(220,38,38,.12);color:#ef4444}
 
+    /* ── Today summary ───────────── */
+    .today-card{
+      background:var(--surface);border:1px solid var(--border);border-radius:8px;
+      padding:8px 14px;box-shadow:var(--shadow);flex-shrink:0;min-height:0;
+      display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;
+    }
+    .today-kicker{font-size:12px;color:var(--text4);font-weight:750;line-height:1}
+    .date-board{display:inline-flex;align-items:center;gap:6px}
+    .date-nav{width:22px;height:22px;border-radius:7px;border:1px solid var(--border);background:var(--surface-hover);color:var(--text3);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;line-height:1;transition:all .12s ease}
+    .date-nav:hover:not(:disabled){border-color:var(--border-hover);color:var(--text);background:var(--primary-dim)}
+    .date-nav:disabled{opacity:.38;color:var(--text4);background:var(--surface-hover);border-color:var(--border);cursor:not-allowed}
+    #today-date{display:inline-flex;align-items:center;justify-content:center;min-width:48px;font-variant-numeric:tabular-nums}
+    .today-score{min-width:94px;text-align:right;align-self:center}
+    .today-score b{display:block;font-size:27px;font-weight:900;color:var(--primary);font-variant-numeric:tabular-nums;line-height:1}
+
     /* ── Stats ──────────────────── */
-    .stats-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;flex-shrink:0;height:64px}
-    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:9px;display:flex;align-items:center;gap:9px;padding:0 10px;overflow:hidden}
-    .stat-icon{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-    .stat-icon.g{background:var(--primary-dim)}.stat-icon.m{background:rgba(217,119,6,.1)}.stat-icon.t{background:rgba(13,148,136,.1)}
-    .stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);font-weight:650;line-height:1.15}
-    .stat-val{font-size:22px;font-weight:750;letter-spacing:0;line-height:1.08}
-    .stat-val.green{color:var(--green-500)}.stat-val.amber{color:var(--amber)}.stat-val.teal{color:var(--teal)}
+    .stats-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;flex-shrink:0;height:56px;min-height:0}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:7px;padding:0 10px;overflow:hidden;box-shadow:var(--shadow)}
+    .stat-icon{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .stat-icon svg{width:15px;height:15px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .stat-icon.g{background:var(--primary-dim);color:var(--primary)}.stat-icon.m{background:rgba(63,111,217,.1);color:var(--blue)}.stat-icon.t{background:rgba(24,160,111,.11);color:var(--mint)}
+    .stat-label{font-size:11px;letter-spacing:0;color:var(--text3);font-weight:700;line-height:1.15}
+    .stat-val{font-size:20px;font-weight:850;letter-spacing:0;line-height:1.08;font-variant-numeric:tabular-nums}
+    .stat-val.green{color:var(--primary)}.stat-val.amber{color:var(--blue)}.stat-val.teal{color:var(--mint)}
 
     /* ── Heatmap (contribution graph style) ── */
     .heat-card{
-      background:var(--surface);border:1px solid var(--border);border-radius:9px;
-      padding:12px 18px 10px;display:flex;flex-direction:column;flex-shrink:0;
-      min-height: 210px;
+      background:var(--surface);border:1px solid var(--border);border-radius:8px;
+      padding:10px 14px 9px;display:flex;flex-direction:column;flex-shrink:0;
+      min-height:0;box-shadow:var(--shadow);overflow:hidden;
     }
     .heat-head{display:flex;align-items:center;margin-bottom:7px;flex-shrink:0}
-    .heat-title{display:flex;align-items:center;gap:7px;min-width:0;width:100%}
-    .heat-title .dot-sm{width:4px;height:4px;border-radius:50%;background:var(--green-500)}
-    .heat-label{display:flex;align-items:baseline;gap:0;font-size:13.5px;font-weight:680;color:var(--text2);white-space:nowrap;line-height:1}
-    .heat-label-static{color:var(--text2)}
-    .heat-now-text{font-size:12px;color:var(--text4);font-variant-numeric:tabular-nums;margin-left:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
-    .heat-toggles{display:contents}
+    .heat-title{display:flex;align-items:center;gap:9px;min-width:0;width:100%}
+    .heat-title .dot-sm{width:6px;height:6px;border-radius:50%;background:var(--primary)}
+    .heat-label{display:flex;align-items:center;gap:0;font-size:15px;font-weight:800;color:var(--text);white-space:nowrap;line-height:1}
+    .heat-label-static{color:var(--text);margin-left:0}
+    .heat-now-text{font-size:12px;color:var(--text4);font-variant-numeric:tabular-nums;margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;text-align:right}
+    .heat-toggles{display:inline-flex;align-items:baseline;gap:0;font-size:0}
     .heat-toggle{display:inline-flex;align-items:baseline;color:var(--text4);font:inherit;cursor:pointer;user-select:none;line-height:1}
     .heat-toggle input{position:absolute;opacity:0;pointer-events:none}
-    .heat-toggle span{transition:color .12s ease,opacity .12s ease}
+    .heat-toggle span{padding:0;font-size:15px;font-weight:800;transition:color .12s ease,opacity .12s ease}
     .heat-toggle:hover span{color:var(--text2)}
     .heat-toggle input:checked + span{color:var(--primary)}
-    .heat-range{display:none}
-    .heat-wrap{flex:1;display:flex;flex-direction:column;align-items:center;min-height:0;justify-content:center;width:100%;overflow:auto}
-    .heat-days{display:grid;grid-template-columns:repeat(var(--heat-day-count),calc(var(--heat-cell) * 4 + var(--heat-gap) * 3));justify-content:center;width:max-content;margin-bottom:7px;flex-shrink:0;gap:var(--heat-day-gap)}
-    .heat-days span{font-size:11px;color:var(--text4);text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums}
+    .heat-range{display:flex;gap:3px;margin-left:8px;border:1px solid var(--border);border-radius:7px;padding:2px;background:var(--surface-hover)}
+    .heat-range button{border:0;background:transparent;color:var(--text4);font-size:11px;font-weight:750;border-radius:5px;padding:2px 6px;cursor:pointer;line-height:1}
+    .heat-range button.active{background:var(--primary-dim);color:var(--primary)}
+    .heat-wrap{flex:1;display:flex;flex-direction:column;align-items:center;min-height:0;justify-content:center;width:100%;overflow:hidden}
+    .heat-days{display:grid;grid-template-columns:repeat(var(--heat-day-count),var(--heat-day-width));justify-content:center;width:max-content;margin-bottom:6px;flex-shrink:0;gap:var(--heat-day-gap)}
+    .heat-days span{font-size:10px;color:var(--text4);font-weight:650;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums;width:var(--heat-day-width);line-height:1}
     .heat-body{display:flex;justify-content:center;align-items:center;width:100%;min-height:0}
     .heat-hours{display:none}
-    .heat-grid{display:grid;grid-template-columns:repeat(var(--heat-day-count),calc(var(--heat-cell) * 4 + var(--heat-gap) * 3));gap:var(--heat-day-gap);justify-content:center;width:max-content;min-width:0;min-height:0}
+    .heat-grid{display:grid;grid-template-columns:repeat(var(--heat-day-count),var(--heat-day-width));gap:var(--heat-day-gap);justify-content:center;width:max-content;min-width:0;min-height:0}
+    .heat-weekdays{display:grid;grid-template-columns:repeat(var(--heat-day-count),var(--heat-day-width));justify-content:center;width:max-content;margin-top:6px;flex-shrink:0;gap:var(--heat-day-gap)}
+    .heat-weekdays span{font-size:9px;color:var(--text4);font-weight:650;opacity:.76;text-align:center;white-space:nowrap;width:var(--heat-day-width);line-height:1}
+    .heat-days:empty,.heat-weekdays:empty{display:none}
     .day-block{display:grid;grid-template-columns:repeat(4,var(--heat-cell));grid-template-rows:repeat(6,var(--heat-cell));grid-auto-flow:column;gap:var(--heat-gap)}
-    .hc{position:relative;border-radius:3px;cursor:pointer;transition:transform .1s ease,box-shadow .1s ease;min-width:0;min-height:0;outline:1px solid rgba(255,255,255,.045);outline-offset:-1px}
-    html[data-theme="light"] .hc{outline-color:rgba(24,35,29,.045)}
-    .hc.now{box-shadow:0 0 0 2px rgba(74,222,128,.72);z-index:1}
-    html[data-theme="light"] .hc.now{box-shadow:0 0 0 2px rgba(21,128,61,.5)}
+    .heat-grid.month{grid-template-columns:repeat(7,18px);gap:5px;align-items:center}
+    .heat-grid.month .month-cell{width:18px;height:18px;border-radius:5px;cursor:pointer;outline:1px solid rgba(255,255,255,.58);outline-offset:-1px}
+    html[data-theme="dark"] .heat-grid.month .month-cell{outline-color:rgba(255,255,255,.05)}
+    .hc{position:relative;border-radius:3px;cursor:pointer;transition:transform .1s ease,box-shadow .1s ease;width:var(--heat-cell);height:var(--heat-cell);outline:1px solid rgba(255,255,255,.58);outline-offset:-1px}
+    html[data-theme="dark"] .hc{outline-color:rgba(255,255,255,.05)}
+    .hc.now{box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 60%,transparent);z-index:1}
     .hc:hover{transform:scale(1.18);z-index:2;box-shadow:0 0 6px rgba(0,0,0,.18)}
-    .heat-foot{display:flex;align-items:center;gap:6px;margin-top:9px;justify-content:center;flex-shrink:0}
-    .heat-foot .heat-legend{display:flex;align-items:center;gap:4px}
+    .heat-foot{display:flex;align-items:center;gap:6px;margin-top:7px;justify-content:center;flex-shrink:0}
+    .heat-foot .heat-legend{display:flex;align-items:center;gap:5px}
     .heat-foot span{font-size:10px;color:var(--text4)}
     .heat-foot .lg-cells{display:flex;gap:2px}
     .heat-foot .lg-cells i{width:10px;height:10px;border-radius:2px;display:inline-block;outline:1px solid rgba(0,0,0,.035);outline-offset:-1px}
@@ -124,41 +187,37 @@
     /* ── App usage ──────────────── */
     .app-section{
       display:flex;flex-direction:column;min-height:0;background:var(--surface);
-      border:1px solid var(--border);border-radius:9px;padding:14px 14px 13px;
+      border:1px solid var(--border);border-radius:8px;padding:13px 13px 14px;
       overflow:hidden;flex-shrink:0;
-      max-height: 300px;
+      flex:0 0 auto;min-height:0;max-height:none;box-shadow:var(--shadow);
     }
-    .sec-head{display:flex;align-items:center;gap:7px;margin-bottom:10px}
-    .sec-head .dot-sm{width:4px;height:4px;border-radius:50%;flex-shrink:0}
-    .sec-head h2{font-size:13.5px;font-weight:680;color:var(--text2)}
-    .app-list{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(5,29px);grid-auto-flow:column;grid-auto-rows:29px;column-gap:10px;row-gap:4px;min-height:0}
-    .app-row{display:flex;align-items:center;gap:5px;padding:2px 4px;border-radius:6px;transition:background .12s;flex-shrink:0;min-width:0;cursor:pointer}
-    .app-row:hover{background:var(--bar-bg)}
+    .sec-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+    .sec-head .dot-sm{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+    .sec-head h2{font-size:15px;font-weight:800;color:var(--text)}
+    .app-list{flex:1;overflow:hidden;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(5,62px);grid-auto-flow:column;column-gap:12px;row-gap:8px;min-height:0;padding-right:0}
+    .app-row{position:relative;display:grid;grid-template-columns:26px 34px minmax(0,1fr);grid-template-rows:21px 18px 8px;align-items:center;gap:1px 8px;padding:7px 8px 6px;border-radius:8px;background:transparent;border:1px solid transparent;transition:background .12s;flex-shrink:0;min-width:0;cursor:pointer;overflow:hidden}
+    .app-row:hover{background:var(--primary-dim);border-color:transparent;transform:none}
     .app-row:active{background:var(--primary-dim)}
-    .app-rank{width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
-    .app-rank.r0{background:var(--primary-dim);color:var(--green-500)}
-    .app-rank.r1{background:rgba(13,148,136,.1);color:var(--teal)}
-    .app-rank.r2{background:rgba(217,119,6,.08);color:var(--amber)}
+    .app-rank{grid-row:1/4;width:26px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:850;flex-shrink:0}
+    .app-rank.r0{background:var(--primary-dim);color:var(--primary)}
+    .app-rank.r1{background:rgba(63,111,217,.1);color:var(--blue)}
+    .app-rank.r2{background:rgba(24,160,111,.11);color:var(--mint)}
     .app-rank.r3{background:rgba(124,58,237,.08);color:var(--violet)}
     .app-rank.rx{background:var(--bar-bg);color:var(--text4)}
-    .app-icon{width:20px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;text-align:center}
-    .app-icon img{width:19px;height:19px;border-radius:5px;display:block}
-    .app-name{width:70px;font-size:12.5px;font-weight:560;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;color:var(--text)}
-    .app-track{flex:1;height:11px;background:var(--bar-bg);border-radius:4px;overflow:hidden;min-width:18px}
-    .app-fill{height:100%;border-radius:4px;transition:width .5s cubic-bezier(.25,.8,.25,1);min-width:2px}
-    .f0{background:linear-gradient(90deg,var(--green-600),var(--green-400))}
-    .f1{background:linear-gradient(90deg,var(--teal),var(--green-400))}
-    .f2{background:linear-gradient(90deg,var(--amber),var(--amber-light))}
-    .f3{background:linear-gradient(90deg,var(--violet),var(--violet-light))}
-    .f4{background:linear-gradient(90deg,var(--sky),var(--sky-light))}
-    .f5{background:linear-gradient(90deg,var(--green-400),#86efac)}
-    .app-pct{width:24px;font-size:10.5px;color:var(--text4);text-align:right;font-variant-numeric:tabular-nums;flex-shrink:0}
-    .app-time{width:36px;font-size:11.5px;color:var(--text3);text-align:right;font-variant-numeric:tabular-nums;flex-shrink:0}
-    .empty{text-align:center;color:var(--text4);font-size:12px;padding:32px 0}
+    .app-icon{grid-row:1/4;width:34px;height:34px;border-radius:9px;background:var(--bar-bg);color:var(--text2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:850;text-align:center;overflow:hidden}
+    .app-icon img{width:28px;height:28px;border-radius:8px;display:block}
+    .app-name{width:auto;font-size:13.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);align-self:end}
+    .app-meta{grid-column:3;font-size:11.2px;color:var(--text4);text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;align-self:start}
+    .app-track{grid-column:3;align-self:end;height:6px;background:var(--bar-bg);border-radius:999px;overflow:hidden;min-width:18px;box-shadow:none}
+    html[data-theme="dark"] .app-track{background:rgba(255,255,255,.11)}
+    .app-fill{position:relative;height:100%;border-radius:999px;transition:width .3s ease;min-width:3px;background:var(--primary);box-shadow:none;overflow:hidden}
+    .f0,.f1,.f2,.f3,.f4,.f5,.f6,.f7,.f8,.f9{background:var(--primary)}
+    .app-pct,.app-time{display:none}
+    .empty{grid-column:1/-1;text-align:center;color:var(--text4);font-size:12px;padding:32px 0}
     .update-toast{
       position:fixed;right:14px;bottom:14px;z-index:24;width:min(320px,calc(100vw - 28px));
-      background:var(--surface);border:1px solid var(--border-hover);border-radius:12px;
-      box-shadow:0 14px 36px rgba(0,0,0,.22);padding:10px 10px 10px 12px;
+      background:var(--surface);border:1px solid var(--border-hover);border-radius:8px;
+      box-shadow:var(--shadow);padding:10px 10px 10px 12px;
       display:flex;align-items:center;gap:10px;color:var(--text)
     }
     .update-toast[hidden]{display:none}
@@ -168,7 +227,7 @@
     .update-copy span{display:block;font-size:11.5px;color:var(--text4);line-height:1.35;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .update-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
     .update-mini-btn{height:28px;border-radius:7px;border:1px solid var(--border);background:var(--surface-hover);color:var(--text2);font-size:12px;font-weight:650;padding:0 9px;cursor:pointer}
-    .update-mini-btn.primary{background:var(--primary-dim);border-color:rgba(22,163,74,.25);color:var(--primary)}
+    .update-mini-btn.primary{background:var(--primary-dim);border-color:rgba(231,93,116,.25);color:var(--primary)}
     .update-mini-btn:hover{border-color:var(--border-hover);color:var(--text)}
 
     /* ── Modal ─────────────────── */
@@ -183,30 +242,50 @@
     .modal-card{
       width:100%;max-width:460px;max-height:min(78vh,520px);
       background:var(--surface);border:1px solid var(--border-hover);
-      border-radius:12px;
-      box-shadow:0 18px 48px rgba(0,0,0,.28);
+      border-radius:8px;
+      box-shadow:0 18px 48px rgba(0,0,0,.2);
       overflow:hidden;display:flex;flex-direction:column;
       animation:modalCardIn .18s cubic-bezier(.2,.8,.2,1);
     }
     .modal.closing .modal-card{animation:modalCardOut .14s ease-in forwards}
-    .modal-card.settings-modal{max-width:430px;max-height:none}
+    .modal-card.settings-modal{max-width:430px;max-height:min(86vh,620px)}
     .modal-card.insight-modal{max-width:500px;max-height:none}
+    .modal-card.analysis-modal{max-width:430px;max-height:none}
     .modal-card.update-modal{max-width:440px;max-height:none}
-    .modal-card.settings-modal .modal-body,
+    .modal-card.intro-modal{max-width:430px;max-height:none}
+    .modal-card.settings-modal .modal-body{overflow:auto}
     .modal-card.insight-modal .modal-body,
-    .modal-card.update-modal .modal-body{overflow:hidden}
-    .modal-head{height:48px;display:flex;align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0}
-    .modal-title{font-size:16px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .modal-card.analysis-modal .modal-body,
+    .modal-card.update-modal .modal-body,
+    .modal-card.intro-modal .modal-body{overflow:hidden}
+    .modal-head{height:50px;display:flex;align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .modal-title{font-size:17px;font-weight:850;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .modal-close{margin-left:auto;width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center}
     .modal-close:hover{border-color:rgba(220,38,38,.25);background:rgba(220,38,38,.12);color:#ef4444}
     .modal-close svg{width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
     .modal-body{padding:16px;overflow:auto;min-height:0;font-size:14px;-webkit-overflow-scrolling:touch}
     .modal-loading,.modal-error{font-size:14px;color:var(--text3);padding:32px;text-align:center}
+    .analysis-panel{padding:10px 6px 6px;display:grid;gap:14px}
+    .analysis-hero{display:flex;align-items:center;gap:13px;min-width:0}
+    .analysis-orb{position:relative;width:54px;height:54px;border-radius:14px;background:var(--primary-dim);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;letter-spacing:0;flex-shrink:0;overflow:hidden}
+    .analysis-orb::after{content:"";position:absolute;inset:8px;border-radius:11px;border:1px solid color-mix(in srgb,var(--primary) 36%,transparent);animation:analysisPulse 1.45s ease-in-out infinite}
+    .analysis-hero b{display:block;color:var(--text);font-size:18px;font-weight:850;line-height:1.2}
+    .analysis-hero span{display:block;margin-top:4px;color:var(--text3);font-size:13px;line-height:1.42}
+    .analysis-steps{display:grid;gap:8px}
+    .analysis-step{display:flex;align-items:center;gap:9px;background:var(--surface-hover);border-radius:8px;padding:9px 10px;color:var(--text2);font-size:13px;font-weight:650;line-height:1.25}
+    .analysis-step i{width:7px;height:7px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 4px var(--primary-dim);flex-shrink:0}
+    .analysis-step:nth-child(2) i{animation:analysisDot 1.1s ease-in-out infinite .15s}
+    .analysis-step:nth-child(3) i{animation:analysisDot 1.1s ease-in-out infinite .3s}
+    .analysis-bar{height:6px;background:var(--bar-bg);border-radius:999px;overflow:hidden}
+    .analysis-bar span{display:block;width:42%;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--primary),color-mix(in srgb,var(--primary) 35%,white));animation:analysisSweep 1.25s ease-in-out infinite}
     @keyframes modalFadeIn{from{opacity:0}to{opacity:1}}
     @keyframes modalFadeOut{from{opacity:1}to{opacity:0}}
     @keyframes modalCardIn{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
     @keyframes modalCardOut{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(5px) scale(.985)}}
     @keyframes toastIn{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes analysisPulse{0%,100%{transform:scale(.92);opacity:.5}50%{transform:scale(1.08);opacity:1}}
+    @keyframes analysisDot{0%,100%{opacity:.35;transform:scale(.82)}50%{opacity:1;transform:scale(1.15)}}
+    @keyframes analysisSweep{0%{transform:translateX(-110%)}50%{transform:translateX(60%)}100%{transform:translateX(240%)}}
     @media (prefers-reduced-motion: reduce){
       *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
     }
@@ -216,7 +295,7 @@
     .detail-name{font-size:18px;font-weight:750;color:var(--text)}
     .detail-sub{font-size:13px;color:var(--text4);margin-top:2px}
     .metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
-    .metric{background:var(--surface-hover);border:1px solid var(--border);border-radius:10px;padding:10px;min-width:0}
+    .metric{background:var(--surface-hover);border:1px solid var(--border);border-radius:8px;padding:10px;min-width:0}
     .metric span{display:block;font-size:12px;color:var(--text4);margin-bottom:4px}
     .metric b{font-size:17px;color:var(--text);font-variant-numeric:tabular-nums}
     .detail-section{margin-top:14px}
@@ -226,10 +305,10 @@
     .detail-day{display:grid;grid-template-columns:repeat(4,11px);grid-template-rows:repeat(6,11px);grid-auto-flow:column;gap:2px}
     .mini-cell{border-radius:2.5px;outline:1px solid rgba(0,0,0,.035);outline-offset:-1px}
     .bar-chart{height:80px;display:grid;grid-template-columns:repeat(24,1fr);align-items:end;gap:2px;padding:8px 0 0;border-bottom:1px solid var(--border)}
-    .bar{min-height:3px;border-radius:3px 3px 0 0;background:linear-gradient(180deg,#7dd3fc,#0e7490)}
+    .bar{min-height:3px;border-radius:3px 3px 0 0;background:var(--primary)}
     .day-bars{display:grid;grid-template-columns:repeat(7,1fr);align-items:end;gap:4px;height:80px;padding-top:8px;border-bottom:1px solid var(--border)}
     .day-bar-wrap{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;min-width:0}
-    .day-bar{width:100%;min-height:3px;border-radius:4px 4px 0 0;background:linear-gradient(180deg,#86efac,#16a34a)}
+    .day-bar{width:100%;min-height:3px;border-radius:4px 4px 0 0;background:var(--primary)}
     .day-bar-wrap span{font-size:11px;color:var(--text4)}
     .data-table{border:1px solid var(--border);border-radius:10px;overflow:hidden}
     .data-row{display:grid;grid-template-columns:80px minmax(0,1fr);gap:8px;align-items:center;padding:10px 12px;border-top:1px solid var(--border);font-size:13px;color:var(--text3)}
@@ -242,11 +321,20 @@
     .action-card b{display:block;font-size:17px;margin-bottom:6px}
     .action-card span{font-size:14px;color:var(--text3);line-height:1.45}
     .muted{font-size:14px;color:var(--text4);line-height:1.65}
-    .insight-list{display:grid;gap:7px;margin-top:7px}
-    .insight-item{background:var(--surface-hover);border:1px solid var(--border);border-radius:9px;padding:9px 10px;font-size:13px;color:var(--text2);line-height:1.48}
-    .insight-item.lead{font-size:14px;color:var(--text);background:var(--primary-dim);border-color:rgba(22,163,74,.18)}
+    .insight-list{display:grid;gap:8px;margin-top:7px}
+    .insight-item{background:var(--surface-hover);border:1px solid var(--border);border-radius:8px;padding:9px 10px;font-size:13px;color:var(--text2);line-height:1.48}
+    .insight-item.lead{font-size:14px;color:var(--text);background:var(--primary-dim);border-color:color-mix(in srgb,var(--primary) 22%,transparent)}
+    .insight-item.clue,.insight-item.suggestion{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:start}
+    .insight-badge{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:850;font-variant-numeric:tabular-nums}
+    .insight-item.clue .insight-badge{width:7px;height:7px;border-radius:50%;margin-top:7px;background:var(--primary);font-size:0;box-shadow:0 0 0 3px var(--primary-dim)}
+    .insight-item.suggestion{background:linear-gradient(180deg,var(--surface),var(--surface-hover));border-color:color-mix(in srgb,var(--primary) 18%,var(--border));color:var(--text)}
+    .insight-item.suggestion .insight-badge{width:22px;height:22px;border-radius:7px;background:var(--primary-dim);color:var(--primary);font-size:11px}
     .insight-section{margin-top:10px}
     .insight-section h3{font-size:13px;color:var(--text2);font-weight:700;margin:0 0 6px}
+    .insight-actions{grid-template-columns:1fr;margin-top:10px}
+    .insight-actions .action-card{padding:12px}
+    .insight-actions .action-card b{font-size:14px;margin-bottom:3px}
+    .insight-actions .action-card span{font-size:12.5px}
     .insight-foot{margin-top:10px;font-size:11.5px;color:var(--text4);line-height:1.45}
     .settings-panel{display:grid;gap:9px}
     .settings-section{background:var(--surface-hover);border:1px solid var(--border);border-radius:10px;padding:10px;display:grid;gap:8px}
@@ -264,31 +352,46 @@
     .settings-action:hover{border-color:var(--border-hover);background:var(--primary-dim)}
     .settings-action b{display:block;font-size:14px;font-weight:700;margin-bottom:4px}
     .settings-action span{display:block;font-size:12px;line-height:1.35;color:var(--text4)}
+    .intro-title{font-size:22px;font-weight:900;color:var(--text);line-height:1.15;margin-bottom:8px}
+    .intro-copy{font-size:14px;color:var(--text2);line-height:1.68}
+    .intro-points{display:grid;gap:8px;margin-top:12px}
+    .intro-point{background:var(--surface-hover);border:1px solid var(--border);border-radius:8px;padding:10px 11px;font-size:13px;color:var(--text2);line-height:1.45}
     .theme-segment{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
     .theme-choice{height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text3);cursor:pointer;font-size:13px;font-weight:650}
-    .theme-choice.active{border-color:rgba(22,163,74,.35);background:var(--primary-dim);color:var(--primary)}
+    .theme-choice.active{border-color:color-mix(in srgb,var(--primary) 38%,transparent);background:var(--primary-dim);color:var(--primary)}
+    .accent-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+    .accent-choice{height:38px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;color:var(--text3);font-size:12px;font-weight:700}
+    .accent-choice i{width:12px;height:12px;border-radius:50%;display:block;background:var(--swatch)}
+    .accent-choice.active{border-color:color-mix(in srgb,var(--primary) 42%,transparent);background:var(--primary-dim);color:var(--primary)}
 
     /* ── 移动端优化 ─────────────────── */
     @media(max-width:430px){
-      .wrap{padding:12px 12px calc(12px + var(--safe-bottom));gap:10px}
+      .wrap{--heat-cell:10px;--heat-gap:2px;--heat-day-gap:var(--heat-gap);padding:10px 10px calc(10px + var(--safe-bottom));gap:7px;grid-template-rows:38px 50px 56px minmax(142px,1fr) 418px}
+      body.nativebar .wrap{grid-template-rows:50px 56px minmax(142px,1fr) 418px}
+      .today-card{grid-template-columns:minmax(0,1fr) auto;gap:8px}
+      .date-board{gap:5px}
+      .today-score{text-align:right}
       .stats-row{grid-template-columns:1fr;height:auto}
-      .stat-card{height:56px}
-      .heat-card{min-height:180px}
-      .heat-days{grid-template-columns:repeat(var(--heat-day-count),calc(var(--heat-cell) * 4 + var(--heat-gap) * 3));gap:8px}
-      .heat-grid{grid-template-columns:repeat(var(--heat-day-count),calc(var(--heat-cell) * 4 + var(--heat-gap) * 3));gap:8px}
-      .app-list{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row;grid-auto-rows:36px}
-      .app-name{width:80px}
+      .stat-card{height:64px}
+      .heat-card{min-height:0}
+      .heat-days{grid-template-columns:repeat(var(--heat-day-count),var(--heat-day-width));gap:var(--heat-day-gap)}
+      .heat-grid{grid-template-columns:repeat(var(--heat-day-count),var(--heat-day-width));gap:var(--heat-day-gap)}
+      .app-list{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(5,64px);grid-auto-flow:column;grid-auto-rows:64px;gap:10px 8px}
       
       /* 触摸优化 */
-      .hc{min-width: 12px; min-height: 12px;}
-      .app-row{padding: 6px 4px; min-height: 36px;}
+      .app-row{padding:8px 8px 8px;min-height:64px;grid-template-columns:24px 30px minmax(0,1fr);grid-template-rows:20px 17px 8px;gap:1px 6px}
+      .app-rank{width:24px;height:28px}
+      .app-icon{width:30px;height:30px}
+      .app-icon img{width:25px;height:25px}
+      .app-name{font-size:12.5px}
+      .app-meta{font-size:10.5px}
       .tool-btn, .theme-btn{width: 32px; height: 32px;}
       .settings-actions{grid-template-columns:1fr}
       .heat-head{align-items:flex-start}
       .heat-title{gap:6px}
       .modal{align-items:flex-end;padding:0}
       .modal-card{
-        max-width:none;max-height:85vh;border-radius:16px 16px 0 0;
+        max-width:none;max-height:85vh;border-radius:8px 8px 0 0;
         box-shadow:0 -10px 40px rgba(0,0,0,.3);
         padding-bottom:var(--safe-bottom);
       }
@@ -324,7 +427,7 @@
     .offline-indicator {
       display: none;
       background: var(--amber);
-      color: #000;
+      color: #111;
       padding: 6px 12px;
       text-align: center;
       font-size: 11px;
@@ -336,16 +439,16 @@
   </style>
 </head>
 <body>
-  <div class="offline-indicator" id="offline-indicator">正在连接交互节律后台…</div>
+  <div class="offline-indicator" id="offline-indicator">正在连接扣舷后台…</div>
   
   <div class="wrap">
     <!-- Header -->
     <div class="header">
       <div class="title-area window-drag">
-        <div class="logo">节</div>
-        <h1>交互节律</h1>
+        <div class="logo" aria-hidden="true"><img src="/icon-192.png" alt=""></div>
+        <div class="brand-copy"><h1>扣舷</h1><span>看见你的数字手感</span></div>
       </div>
-      <button class="tool-btn" onclick="openInsights()" title="节律助手" aria-label="节律助手">
+      <button class="tool-btn" data-action="insights" onclick="openMimoInsights()" title="手感回放" aria-label="手感回放">
         <svg viewBox="0 0 24 24"><path d="M12 3l1.7 5.1L19 10l-5.3 1.9L12 17l-1.7-5.1L5 10l5.3-1.9z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>
       </button>
       <button class="tool-btn" onclick="openSettings()" title="设置" aria-label="设置">
@@ -365,11 +468,19 @@
       <span style="margin-left: 8px">刷新中...</span>
     </div>
 
+    <!-- Today handfeel -->
+    <div class="today-card">
+      <div>
+        <div class="today-kicker"><span class="date-board"><button class="date-nav" id="date-prev" type="button" title="前一天" aria-label="前一天">‹</button><span id="today-date"></span><button class="date-nav" id="date-next" type="button" title="后一天" aria-label="后一天">›</button></span></div>
+      </div>
+      <div class="today-score"><b id="today-score">—</b></div>
+    </div>
+
     <!-- Stats -->
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-icon g">⌨️</div><div><div class="stat-label">键盘响应</div><div class="stat-val green" id="v-keys">—</div></div></div>
-      <div class="stat-card"><div class="stat-icon m">🖱️</div><div><div class="stat-label">鼠标响应</div><div class="stat-val amber" id="v-mouse">—</div></div></div>
-      <div class="stat-card"><div class="stat-icon t">⏱️</div><div><div class="stat-label">活跃时长</div><div class="stat-val teal" id="v-time">—</div></div></div>
+      <div class="stat-card"><div class="stat-icon g"><svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z"/><path d="M7 10h.01M10 10h.01M13 10h.01M16 10h.01M8 14h8"/></svg></div><div><div class="stat-label">键盘</div><div class="stat-val green" id="v-keys">—</div></div></div>
+      <div class="stat-card"><div class="stat-icon m"><svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 1 6 6v6a6 6 0 0 1-12 0V9a6 6 0 0 1 6-6z"/><path d="M12 7v4"/></svg></div><div><div class="stat-label">鼠标</div><div class="stat-val amber" id="v-mouse">—</div></div></div>
+      <div class="stat-card"><div class="stat-icon t"><svg viewBox="0 0 24 24"><path d="M12 7v5l3 2"/><path d="M21 12a9 9 0 1 1-9-9"/></svg></div><div><div class="stat-label">活跃时长</div><div class="stat-val teal" id="v-time">—</div></div></div>
     </div>
 
     <!-- Hour heatmap -->
@@ -377,11 +488,12 @@
       <div class="heat-head">
         <div class="heat-title">
           <div class="dot-sm"></div>
-          <h2 class="heat-label" aria-label="键盘鼠标响应热力图">
+          <h2 class="heat-label" aria-label="键盘鼠标热力图">
             <span class="heat-toggles" aria-label="热力图数据选择">
               <label class="heat-toggle"><input type="checkbox" id="heat-keyboard" checked onchange="renderHeatmap()"><span>键盘</span></label>
               <label class="heat-toggle"><input type="checkbox" id="heat-mouse" checked onchange="renderHeatmap()"><span>鼠标</span></label>
-            </span><span class="heat-label-static">响应热力图</span>
+            </span><span class="heat-label-static">热力图</span>
+            <span class="heat-range"><button type="button" id="heat-week-btn" class="active" onclick="setHeatRange('week')">周</button><button type="button" id="heat-month-btn" onclick="setHeatRange('month')">月</button></span>
           </h2>
           <span class="heat-now-text" id="heat-now-text"></span>
         </div>
@@ -392,6 +504,7 @@
           <div class="heat-hours" id="heat-day-labels"></div>
           <div class="heat-grid" id="heat-grid"></div>
         </div>
+        <div class="heat-weekdays" id="heat-weekday-labels"></div>
       </div>
       <div class="heat-foot">
         <div class="heat-legend"><span>less</span><div class="lg-cells" id="heat-lg"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span>more</span></div>
@@ -400,7 +513,7 @@
 
     <!-- App ranking -->
     <div class="app-section">
-      <div class="sec-head"><div class="dot-sm" style="background:var(--teal)"></div><h2>应用时长排行</h2><div class="spacer"></div><span style="font-size:10px;color:var(--text4)" id="app-count"></span></div>
+      <div class="sec-head"><div class="dot-sm" style="background:var(--primary)"></div><h2>应用强度榜</h2><div class="spacer"></div><span style="font-size:10px;color:var(--text4)" id="app-count"></span></div>
       <div class="app-list" id="app-list"><div class="empty">等待数据…</div></div>
     </div>
   </div>
@@ -436,6 +549,145 @@ if(IS_DESKTOP){document.body.classList.add('is-desktop')}
 if(IS_NATIVEBAR){document.body.classList.add('nativebar')}
 
 var dataRetryTimer=null;
+function isoDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function todayIso(){return isoDate(new Date())}
+function shiftDateIso(date,delta){var d=new Date((date||todayIso())+'T00:00:00');d.setDate(d.getDate()+delta);return isoDate(d)}
+var selectedDate=todayIso();
+var I18N={
+  zh:{
+    subtitle:'看见你的数字手感', replay:'手感回放', settings:'设置', connecting:'正在连接扣舷后台…',
+    dayReplay:'这一天', weekReplay:'最近 7 天', dayReplayDesc:'回到当前选中日期。', weekReplayDesc:'看连续几天的主场、峰值和变化。',
+    dayReplayLoading:'正在回放这一天的数字手感…', weekReplayLoading:'正在回放最近的数字手感…', mimoReplayLoading:'正在调用 MiMo 生成这一天的回放…', replayFailed:'回放失败',
+    mimoAnalyzingTitle:'MiMo 正在分析', mimoAnalyzingLead:'正在整理这一天的键盘、鼠标、应用停留和峰值小时。', mimoAnalyzingStep1:'读取本机聚合统计', mimoAnalyzingStep2:'梳理主场应用与手感峰值', mimoAnalyzingStep3:'生成当天回放文本',
+    todayTitle:'数字手感', readingStrength:'正在读取这一天的手感…', response:'响应',
+    keyboard:'键盘', mouse:'鼠标', active:'活跃时长', heatmap:'热力图', keyboardShort:'键盘', mouseShort:'鼠标',
+    less:'less', more:'more', appRank:'应用强度榜', waiting:'等待数据…', noData:'暂无数据',
+    mixed:'混合手感', typingStrong:'键盘偏强', browsingStrong:'浏览偏强', noMain:'暂无主场',
+    inheritHint:'先正常使用一会儿，扣舷会接上旧记录。', dayEmpty:'这一天还没有留下清晰手感。', mainApp:' 是今日主场 · ', dayMainApp:' 是这一天的主场 · ',
+    peakAround:' · 峰值在 ', quietWithPeak:'这一天有一点轻响，峰值在 ',
+    introTitle:'扣舷', introBody:'“扣舷”取意自“扣舷而歌”：不窥探内容，只听见动作留下的轻响。它不会读取你输入了什么，只把时长、键盘、鼠标和应用停留整理成一份数字手感。',
+    intro1:'继承旧版记录：原来的 tracker.db、设置和图标缓存会继续使用。', intro2:'不做效率评分：这里只看强度、回返和主场应用。', intro3:'你可以把它当成一面轻量的桌面手感镜子。',
+    start:'开始使用', langToggle:'EN', refreshing:'刷新中...', view:'查看', later:'稍后', close:'关闭', minimize:'最小化', tray:'隐藏到托盘',
+    switchOn:'开启', switchOff:'关闭', settingsReadFailed:'设置读取失败', settingsSaveFailed:'设置保存失败',
+    noUpdateNotes:'这次更新没有额外说明。', updateFound:'发现新版本', canInstallLater:'可以稍后安装',
+    currentVersion:'当前版本', newVersion:'新版本', latestVersion:'最新版本', updateReady:'新版已准备好。安装时应用会短暂关闭，完成后自动重新打开。',
+    updateContent:'更新内容', downloadInstall:'下载并安装', installShort:'安装过程中应用会短暂关闭。', keepCurrent:'保留当前版本继续使用。',
+    notNow:'稍后再说', checkUpdate:'检查更新', noUpdateChannel:'当前版本还没有配置更新通道。', checkingVersion:'正在后台确认版本，稍后会自动提醒。',
+    alreadyLatest:'现在已经是最新版本。', recheck:'重新检查', recheckDesc:'立即连接更新通道确认一次。', backSettings:'返回设置', closePanel:'关闭这个面板。',
+    readingUpdate:'正在读取更新状态…', updateStatusFailed:'更新状态读取失败', connectingUpdate:'正在连接更新通道…', updateCheckFailed:'更新检查失败',
+    installUpdate:'安装更新', preparingInstall:'正在准备下载和安装，应用稍后会自动关闭…', installingRestart:'正在安装更新，应用稍后会自动重启', installFailed:'更新安装失败',
+    appRecordLoading:'正在读取应用记录…', appRecordFailed:'应用记录读取失败', totalTime:'总时长', todayMetric:'今天', returns:'回返', peak:'高峰',
+    touchResponses:'手感响应', keystrokesMetric:'键盘', mouseMetric:'鼠标', density:'手感密度', appTouchMap:'应用手感图', hourlyDistribution:'小时分布',
+    dailyTime:'每日时长', windowTitles:'窗口标题', to:'至', perMin:'次/分', today:'今天', previousDay:'前一天', nextDay:'后一天',
+    hourDetail:'这一小时的回声', hourApps:'应用构成', noHourApps:'这一小时还没有明确应用构成。', week:'周', month:'月',
+    language:'语言', chinese:'中文', english:'English', accent:'主题色', green:'传统绿', rose:'玫红', indigo:'靛蓝', ink:'墨色'
+  },
+  en:{
+    subtitle:'See your digital touch', replay:'Touch Replay', settings:'Settings', connecting:'Connecting to Kouxian…',
+    dayReplay:'This day', weekReplay:'Last 7 days', dayReplayDesc:'Return to the selected date.', weekReplayDesc:'See the main apps, peaks, and shifts across days.',
+    dayReplayLoading:'Replaying this day...', weekReplayLoading:'Replaying recent digital touch...', mimoReplayLoading:'Asking MiMo to replay this day...', replayFailed:'Replay failed',
+    mimoAnalyzingTitle:'MiMo is analyzing', mimoAnalyzingLead:'Reading this day’s keyboard, mouse, app presence, and peak hours.', mimoAnalyzingStep1:'Reading local aggregate data', mimoAnalyzingStep2:'Finding main apps and peak touch', mimoAnalyzingStep3:'Writing the daily replay',
+    todayTitle:'Digital Touch', readingStrength:'Reading this day’s touch…', response:'Responses',
+    keyboard:'Keyboard', mouse:'Mouse', active:'Active Time', heatmap:'Heatmap', keyboardShort:'Keys', mouseShort:'Mouse',
+    less:'less', more:'more', appRank:'App Strength', waiting:'Waiting for data…', noData:'No data yet',
+    mixed:'Mixed touch', typingStrong:'Typing-heavy', browsingStrong:'Browsing-heavy', noMain:'No main app',
+    inheritHint:'Use your computer for a while. Kouxian will continue from existing records.', dayEmpty:'No clear touch shape on this day yet.', mainApp:' is today’s main app · ', dayMainApp:' is this day’s main app · ',
+    peakAround:' · peak around ', quietWithPeak:'This day has a light trace, peaking around ',
+    introTitle:'Kouxian', introBody:'Kouxian means tapping the side of a boat and hearing the rhythm. It does not read what you type. It only turns time, keystrokes, mouse responses, and foreground apps into a personal digital-touch map.',
+    intro1:'Keeps old records: tracker.db, settings, and icon cache continue to work.', intro2:'No productivity score: it observes intensity, returns, and main apps.', intro3:'Think of it as a quiet mirror for your desktop touch.',
+    start:'Start', langToggle:'中', refreshing:'Refreshing...', view:'View', later:'Later', close:'Close', minimize:'Minimize', tray:'Hide to tray',
+    switchOn:'Turn on', switchOff:'Turn off', settingsReadFailed:'Failed to read settings', settingsSaveFailed:'Failed to save settings',
+    noUpdateNotes:'No additional notes for this update.', updateFound:'New version found', canInstallLater:'You can install it later',
+    currentVersion:'Current', newVersion:'New', latestVersion:'Latest', updateReady:'The new version is ready. The app will close briefly and reopen after installation.',
+    updateContent:'What changed', downloadInstall:'Download & Install', installShort:'The app will close briefly during installation.', keepCurrent:'Keep using the current version.',
+    notNow:'Not Now', checkUpdate:'Check Updates', noUpdateChannel:'This build does not have an update channel configured.', checkingVersion:'Checking in the background. You will be notified when ready.',
+    alreadyLatest:'You are on the latest version.', recheck:'Check Again', recheckDesc:'Connect to the update channel now.', backSettings:'Back to Settings', closePanel:'Close this panel.',
+    readingUpdate:'Reading update status...', updateStatusFailed:'Failed to read update status', connectingUpdate:'Connecting to update channel...', updateCheckFailed:'Update check failed',
+    installUpdate:'Install Update', preparingInstall:'Preparing download and installation. The app will close soon...', installingRestart:'Installing update. The app will restart soon.', installFailed:'Update installation failed',
+    appRecordLoading:'Reading app records...', appRecordFailed:'Failed to read app records', totalTime:'Total Time', todayMetric:'Today', returns:'Returns', peak:'Peak',
+    touchResponses:'Touch Responses', keystrokesMetric:'Keys', mouseMetric:'Mouse', density:'Density', appTouchMap:'App Touch Map', hourlyDistribution:'Hourly',
+    dailyTime:'Daily Time', windowTitles:'Window Titles', to:'to', perMin:'/min', today:'Today', previousDay:'Previous day', nextDay:'Next day',
+    hourDetail:'This Hour', hourApps:'App Mix', noHourApps:'No clear app mix for this hour yet.', week:'Week', month:'Month',
+    language:'Language', chinese:'中文', english:'English', accent:'Accent', green:'Classic Green', rose:'Rose', indigo:'Indigo', ink:'Ink'
+  }
+};
+function getLang(){return localStorage.getItem('kx-lang')||'zh'}
+function t(key){return (I18N[getLang()]&&I18N[getLang()][key])||I18N.zh[key]||key}
+function setText(id,value){var el=document.getElementById(id);if(el)el.textContent=value}
+function applyLanguage(){
+  document.documentElement.lang=getLang()==='en'?'en':'zh-CN';
+  document.querySelector('.brand-copy span').textContent=t('subtitle');
+  var replayBtn=document.querySelector('[data-action="insights"]');
+  if(replayBtn){replayBtn.setAttribute('title',t('replay'));replayBtn.setAttribute('aria-label',t('replay'));}
+  document.querySelector('[onclick="openSettings()"]').setAttribute('title',t('settings'));
+  document.querySelector('[onclick="openSettings()"]').setAttribute('aria-label',t('settings'));
+  var minBtn=document.querySelector('[onclick="windowControl(\'minimize\')"]');
+  if(minBtn){minBtn.setAttribute('title',t('minimize'));minBtn.setAttribute('aria-label',t('minimize'));}
+  var closeBtn=document.querySelector('[onclick="windowControl(\'close\')"]');
+  if(closeBtn){closeBtn.setAttribute('title',t('tray'));closeBtn.setAttribute('aria-label',t('tray'));}
+  var modalClose=document.querySelector('.modal-close');
+  if(modalClose){modalClose.setAttribute('title',t('close'));modalClose.setAttribute('aria-label',t('close'));}
+  setText('offline-indicator',t('connecting'));
+  var refreshText=document.querySelector('.pull-to-refresh span:last-child'); if(refreshText)refreshText.textContent=t('refreshing');
+  updateDateControls();
+  var todayTitle=document.querySelector('.today-title');
+  if(todayTitle)todayTitle.textContent=t('todayTitle');
+  document.querySelectorAll('.stat-label')[0].textContent=t('keyboard');
+  document.querySelectorAll('.stat-label')[1].textContent=t('mouse');
+  document.querySelectorAll('.stat-label')[2].textContent=t('active');
+  document.querySelector('#heat-keyboard + span').textContent=t('keyboardShort');
+  document.querySelector('#heat-mouse + span').textContent=t('mouseShort');
+  document.querySelector('.heat-label-static').textContent=t('heatmap');
+  setText('heat-week-btn',t('week'));
+  setText('heat-month-btn',t('month'));
+  var legend=document.querySelectorAll('.heat-legend span'); if(legend[0])legend[0].textContent=t('less'); if(legend[1])legend[1].textContent=t('more');
+  document.querySelector('.sec-head h2').textContent=t('appRank');
+  var empty=document.querySelector('.app-list .empty'); if(empty)empty.textContent=t('waiting');
+  var toastBtns=document.querySelectorAll('.update-actions button');
+  if(toastBtns[0])toastBtns[0].textContent=t('view');
+  if(toastBtns[1])toastBtns[1].textContent=t('later');
+}
+function isSelectedToday(){return selectedDate>=todayIso()}
+function updateDateControls(){
+  var dateEl=document.getElementById('today-date');
+  var next=document.getElementById('date-next');
+  var prev=document.getElementById('date-prev');
+  var atToday=isSelectedToday();
+  if(dateEl)dateEl.textContent=fmtDateLabel(selectedDate);
+  if(prev){prev.setAttribute('title',t('previousDay'));prev.setAttribute('aria-label',t('previousDay'));}
+  if(next){next.disabled=atToday;next.setAttribute('title',t('nextDay'));next.setAttribute('aria-label',t('nextDay'));}
+}
+function changeDate(delta){
+  selectedDate=shiftDateIso(selectedDate,delta);
+  if(selectedDate>todayIso())selectedDate=todayIso();
+  lastAppsLayoutSignature='';
+  monthHeatmap=null;
+  updateDateControls();
+  loadData();
+}
+function toggleLang(){setLanguage(getLang()==='en'?'zh':'en',{renderSettings:false});}
+function savePreferencePatch(patch){
+  return fetch('/api/settings',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(patch)
+  }).then(function(r){return r.json()}).then(function(d){
+    if(d&&d.ok&&d.settings){
+      SETTINGS_STATE=Object.assign({},SETTINGS_DEFAULTS,d.settings||{});
+    }
+  }).catch(function(){});
+}
+function setLanguage(lang,options){
+  options=options||{};
+  lang=lang==='en'?'en':'zh';
+  localStorage.setItem('kx-lang',lang);
+  applyLanguage();
+  if(options.renderSettings!==false){
+    renderSettings(SETTINGS_STATE);
+  }
+  savePreferencePatch({language:lang});
+  loadData();
+}
 function setOfflineMessage(show,text){
   var el=document.getElementById('offline-indicator');
   if(!el)return;
@@ -452,7 +704,8 @@ async function windowControl(action){
 }
 
 /* ── Theme ─────────────────────── */
-function getTheme(){return localStorage.getItem('tt-theme')||'light'}
+function getTheme(){return localStorage.getItem('kx-theme')||'light'}
+function getAccent(){return localStorage.getItem('kx-accent')||'green'}
 function syncNativeTheme(t){
   try{
     if(window.pywebview&&window.pywebview.api&&window.pywebview.api.set_native_theme){
@@ -462,45 +715,63 @@ function syncNativeTheme(t){
 }
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme',t);
+  document.documentElement.setAttribute('data-accent',getAccent());
   var themeToggle=document.getElementById('theme-toggle');
   if(themeToggle)themeToggle.textContent=t==='dark'?'☀️':'🌙';
   document.querySelectorAll('[data-theme-choice]').forEach(function(btn){
     btn.classList.toggle('active',btn.dataset.themeChoice===t);
+  });
+  document.querySelectorAll('[data-accent-choice]').forEach(function(btn){
+    btn.classList.toggle('active',btn.dataset.accentChoice===getAccent());
   });
   syncNativeTheme(t);
   
   // 更新 meta theme-color
   const metaTheme = document.querySelector('meta[name="theme-color"]');
   if (metaTheme) {
-    metaTheme.content = t === 'dark' ? '#0d1216' : '#f4f6f5';
+    metaTheme.content = t === 'dark' ? '#151515' : '#f7f7f7';
   }
 }
-function setThemeChoice(t){localStorage.setItem('tt-theme',t);applyTheme(t)}
+function setThemeChoice(t){localStorage.setItem('kx-theme',t);applyTheme(t);renderSettings(SETTINGS_STATE);savePreferencePatch({theme:t})}
+function setAccentChoice(t){t=t||'green';localStorage.setItem('kx-accent',t);applyTheme(getTheme());renderSettings(SETTINGS_STATE);savePreferencePatch({accent:t});renderHeatmap();}
 function toggleTheme(){var n=getTheme()==='dark'?'light':'dark';setThemeChoice(n)}
 applyTheme(getTheme());
+applyLanguage();
 window.addEventListener('pywebviewready',function(){syncNativeTheme(getTheme())});
 
 /* ── Utils ─────────────────────── */
 function fmtTime(s){s=Math.max(0,Math.round(s||0));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60);if(h>0)return h+'h'+String(m).padStart(2,'0')+'m';if(m>0)return m+'m';return s+'s'}
-function fmtNum(n){return n.toLocaleString('zh-CN')}
+function fmtNum(n){return n.toLocaleString(getLang()==='en'?'en-US':'zh-CN')}
 function fmtDateShort(s){var p=String(s||'').split('-');return p.length===3?(Number(p[1])+'/'+Number(p[2])):s}
+function fmtDateLabel(s){var p=String(s||'').split('-');if(p.length!==3)return s;return getLang()==='en'?(Number(p[1])+'/'+Number(p[2])):(Number(p[1])+'月'+Number(p[2])+'日')}
 function fmtHour(h){return String(h).padStart(2,'0')+':00'}
 function fmtStamp(s){if(!s)return '—';var d=new Date(s);return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
 function fmtHourRange(h){return String(h).padStart(2,'0')+':00-'+String((h+1)%24).padStart(2,'0')+':00'}
 
-var FILLS=['f0','f1','f2','f3','f4','f5'];
+var FILLS=['f0','f1','f2','f3','f4','f5','f6','f7','f8','f9'];
 var RANKS=['r0','r1','r2','r3','rx','rx','rx','rx','rx','rx'];
-var APP_MAP={'Code':'VS Code','Code - Insiders':'VS Code','chrome':'Chrome','msedge':'Edge','firefox':'Firefox','opera':'Opera','brave':'Brave','explorer':'文件管理器','explorer.exe':'文件管理器','cmd':'命令提示符','powershell':'PowerShell','WindowsTerminal':'终端','wt':'终端','pwsh':'PowerShell','bash':'Bash','wsl':'WSL','devenv':'VS','idea64':'IntelliJ','idea':'IntelliJ','webstorm64':'WebStorm','pycharm64':'PyCharm','clion64':'CLion','notepad++':'Notepad++','notepad':'记事本','Sublime Text':'Sublime','atom':'Atom','cursor':'Cursor','Cursor':'Cursor','Trae':'Trae','Windsurf':'Windsurf','Codex':'Codex','codex':'Codex','slack':'Slack','Teams':'Teams','wechat':'微信','WeChat':'微信','QQ':'QQ','TIM':'TIM','dingtalk':'钉钉','Dingtalk':'钉钉','DingTalk':'钉钉','feishu':'飞书','Lark':'飞书','telegram':'Telegram','Discord':'Discord','whatsapp':'WhatsApp','zoom':'Zoom','ZoomIt':'ZoomIt','Spotify':'Spotify','网易云音乐':'网易云','CloudMusic':'网易云','QQMusic':'QQ音乐','kugou':'酷狗','KuGou':'酷狗','PotPlayer':'PotPlayer','vlc':'VLC','mpv':'mpv','Photoshop':'Photoshop','Illustrator':'Illustrator','Figma':'Figma','figma':'Figma','Adobe Premiere Pro':'Premiere','AfterFX':'AE','Sai':'SAI','SAI2':'SAI2','ClipStudioPaint':'CSP','steam':'Steam','EpicGamesLauncher':'Epic','epic':'Epic','obsidian':'Obsidian','Notion':'Notion','Typora':'Typora','Mark Text':'Mark Text','logseq':'Logseq','Word':'Word','WINWORD':'Word','Excel':'Excel','EXCEL':'Excel','PowerPoint':'PPT','POWERPNT':'PPT','OUTLOOK':'Outlook','OneNote':'OneNote','ONENOTE':'OneNote','Postman':'Postman','Docker Desktop':'Docker','docker':'Docker','Git':'Git','GitHub Desktop':'GitHub','node':'Node','python':'Python','python3':'Python','pythonw':'Python','pythonw.exe':'Python','OBS':'OBS','obs64':'OBS','ShareX':'ShareX','Snipaste':'Snipaste','AutoHotkey':'AHK','Quicker':'Quicker','Flow.Launcher':'Flow','Everything':'Everything','vmware':'VMware','TypeTracker':'交互节律','TypeTracker.exe':'交互节律','InteractionRhythm':'交互节律','InteractionRhythm.exe':'交互节律','交互节律':'交互节律','Claude':'Claude','ChatGPT':'ChatGPT','Perplexity':'Perplexity','DeepL':'DeepL','有道词典':'有道','WPS':'WPS','wps':'WPS','et':'WPS表格','wpp':'WPS演示','Foxmail':'Foxmail','qBittorrent':'qBit','studio64':'Android','RustRover':'RustRover','fleet':'Fleet','Unity':'Unity','UnrealEditor':'UE','Godot':'Godot','quark':'夸克','quark.exe':'夸克','RevoUnin':'Revo卸载','RevoUnin.exe':'Revo卸载','GeekDesk':'GeekDesk','GeekDesk.exe':'GeekDesk','CLaunch':'CLaunch','CLaunch.exe':'CLaunch','OpenCode':'OpenCode'};
-var APP_ICONS={'Code':'💻','Code - Insiders':'💻','Code.exe':'💻','chrome':'🌐','msedge':'🌐','msedge.exe':'🌐','firefox':'🦊','opera':'🌐','brave':'🦁','explorer':'📁','explorer.exe':'📁','cmd':'⬛','powershell':'🔵','WindowsTerminal':'⬛','WindowsTerminal.exe':'⬛','wt':'⬛','pwsh':'🔵','devenv':'🟣','idea64':'🧠','idea':'🧠','webstorm64':'🧠','pycharm64':'🐍','notepad++':'📝','notepad':'📝','Sublime Text':'📝','atom':'⚛️','cursor':'🖱️','Cursor':'🖱️','Trae':'💻','Windsurf':'🏄','Codex':'🤖','codex':'🤖','slack':'💬','Teams':'👥','wechat':'💬','WeChat':'💬','QQ':'🐧','TIM':'🐧','dingtalk':'📌','Dingtalk':'📌','DingTalk':'📌','feishu':'🐦','Lark':'🐦','telegram':'✈️','Discord':'🎮','whatsapp':'💬','zoom':'📹','ZoomIt':'📹','Spotify':'🎵','网易云音乐':'🎵','CloudMusic':'🎵','QQMusic':'🎵','kugou':'🎵','KuGou':'🎵','PotPlayer':'🎬','vlc':'🎬','mpv':'🎬','Photoshop':'🎨','Illustrator':'🎨','Figma':'🎨','figma':'🎨','Adobe Premiere Pro':'🎬','AfterFX':'🎬','Sai':'🎨','SAI2':'🎨','ClipStudioPaint':'🎨','steam':'🎮','EpicGamesLauncher':'🎮','epic':'🎮','obsidian':'📓','Notion':'📓','Typora':'📝','Mark Text':'📝','logseq':'📓','Word':'📄','WINWORD':'📄','Excel':'📊','EXCEL':'📊','PowerPoint':'📊','POWERPNT':'📊','OUTLOOK':'📧','OneNote':'📓','Postman':'📮','Docker Desktop':'🐳','docker':'🐳','Git':'📦','GitHub Desktop':'🐙','node':'💚','python':'🐍','python3':'🐍','pythonw':'🐍','pythonw.exe':'🐍','OBS':'🎥','obs64':'🎥','ShareX':'📸','Snipaste':'📸','AutoHotkey':'⌨️','Quicker':'⚡','Flow.Launcher':'🚀','Everything':'🔍','vmware':'💻','TypeTracker':'▦','交互节律':'▦','InteractionRhythm':'▦','Claude':'🤖','ChatGPT':'🤖','Perplexity':'🔍','DeepL':'🌐','有道词典':'📖','WPS':'📄','wps':'📄','et':'📊','wpp':'📊','Foxmail':'📧','qBittorrent':'📥','studio64':'📱','RustRover':'🦀','fleet':'🧠','Unity':'🎮','UnrealEditor':'🎮','Godot':'🎮','quark':'🌐','quark.exe':'🌐','RevoUnin':'🗑️','RevoUnin.exe':'🗑️','GeekDesk':'🖥️','GeekDesk.exe':'🖥️','CLaunch':'🖥️','CLaunch.exe':'🖥️','OpenCode':'💻','OpenCode.exe':'💻','Taskmgr':'📊'};
+var APP_MAP={'Code':'VS Code','Code - Insiders':'VS Code','chrome':'Chrome','msedge':'Edge','firefox':'Firefox','opera':'Opera','brave':'Brave','explorer':'文件管理器','explorer.exe':'文件管理器','cmd':'命令提示符','powershell':'PowerShell','WindowsTerminal':'终端','wt':'终端','pwsh':'PowerShell','bash':'Bash','wsl':'WSL','devenv':'VS','idea64':'IntelliJ','idea':'IntelliJ','webstorm64':'WebStorm','pycharm64':'PyCharm','clion64':'CLion','notepad++':'Notepad++','notepad':'记事本','Sublime Text':'Sublime','atom':'Atom','cursor':'Cursor','Cursor':'Cursor','Trae':'Trae','Windsurf':'Windsurf','Codex':'Codex','codex':'Codex','slack':'Slack','Teams':'Teams','wechat':'微信','WeChat':'微信','QQ':'QQ','TIM':'TIM','dingtalk':'钉钉','Dingtalk':'钉钉','DingTalk':'钉钉','feishu':'飞书','Lark':'飞书','telegram':'Telegram','Discord':'Discord','whatsapp':'WhatsApp','zoom':'Zoom','ZoomIt':'ZoomIt','Spotify':'Spotify','网易云音乐':'网易云','CloudMusic':'网易云','QQMusic':'QQ音乐','kugou':'酷狗','KuGou':'酷狗','PotPlayer':'PotPlayer','vlc':'VLC','mpv':'mpv','Photoshop':'Photoshop','Illustrator':'Illustrator','Figma':'Figma','figma':'Figma','Adobe Premiere Pro':'Premiere','AfterFX':'AE','Sai':'SAI','SAI2':'SAI2','ClipStudioPaint':'CSP','steam':'Steam','EpicGamesLauncher':'Epic','epic':'Epic','obsidian':'Obsidian','Notion':'Notion','Typora':'Typora','Mark Text':'Mark Text','logseq':'Logseq','Word':'Word','WINWORD':'Word','Excel':'Excel','EXCEL':'Excel','PowerPoint':'PPT','POWERPNT':'PPT','OUTLOOK':'Outlook','OneNote':'OneNote','ONENOTE':'OneNote','Postman':'Postman','Docker Desktop':'Docker','docker':'Docker','Git':'Git','GitHub Desktop':'GitHub','node':'Node','python':'Python','python3':'Python','pythonw':'Python','pythonw.exe':'Python','OBS':'OBS','obs64':'OBS','ShareX':'ShareX','Snipaste':'Snipaste','AutoHotkey':'AHK','Quicker':'Quicker','Flow.Launcher':'Flow','Everything':'Everything','vmware':'VMware','TypeTracker':'扣舷','TypeTracker.exe':'扣舷','InteractionRhythm':'扣舷','InteractionRhythm.exe':'扣舷','交互节律':'扣舷','叩舷':'扣舷','扣舷':'扣舷','Claude':'Claude','ChatGPT':'ChatGPT','Perplexity':'Perplexity','DeepL':'DeepL','有道词典':'有道','WPS':'WPS','wps':'WPS','et':'WPS表格','wpp':'WPS演示','Foxmail':'Foxmail','qBittorrent':'qBit','studio64':'Android','RustRover':'RustRover','fleet':'Fleet','Unity':'Unity','UnrealEditor':'UE','Godot':'Godot','quark':'夸克','quark.exe':'夸克','RevoUnin':'Revo卸载','RevoUnin.exe':'Revo卸载','GeekDesk':'GeekDesk','GeekDesk.exe':'GeekDesk','CLaunch':'CLaunch','CLaunch.exe':'CLaunch','OpenCode':'OpenCode'};
+var APP_MAP_EN={'explorer':'File Explorer','explorer.exe':'File Explorer','cmd':'Command Prompt','powershell':'PowerShell','WindowsTerminal':'Terminal','wechat':'WeChat','WeChat':'WeChat','dingtalk':'DingTalk','feishu':'Feishu','Lark':'Feishu','网易云音乐':'NetEase Music','CloudMusic':'NetEase Music','QQMusic':'QQ Music','PotPlayer':'PotPlayer','notepad':'Notepad','TypeTracker':'Kouxian','TypeTracker.exe':'Kouxian','InteractionRhythm':'Kouxian','InteractionRhythm.exe':'Kouxian','交互节律':'Kouxian','叩舷':'Kouxian','扣舷':'Kouxian','有道词典':'Youdao','文件管理器':'File Explorer'};
 function friendlyName(a){
+  if(getLang()==='en'){
+    if(APP_MAP_EN[a])return APP_MAP_EN[a];
+    var be=String(a||'').replace(/\.exe$/i,'');
+    if(APP_MAP_EN[be])return APP_MAP_EN[be];
+  }
   if(APP_MAP[a])return APP_MAP[a];
   var b=String(a||'').replace(/\.exe$/i,'');
   if(APP_MAP[b])return APP_MAP[b];
-  if(['interactionrhythm','typetracker'].indexOf(b.toLowerCase())>=0)return '交互节律';
+  if(['interactionrhythm','typetracker'].indexOf(b.toLowerCase())>=0)return getLang()==='en'?'Kouxian':'扣舷';
   return b;
 }
-function appSubName(a){var n=friendlyName(a);return n==='交互节律'?n:a}
-function appIcon(a){if(APP_ICONS[a])return APP_ICONS[a];var b=a.replace(/\.exe$/i,'');return APP_ICONS[b]||'📱'}
+function appSubName(a){var n=friendlyName(a);return n==='扣舷'||n==='Kouxian'?n:a}
+function appIcon(a){
+  var b=String(a||'').replace(/\.exe$/i,'');
+  var lower=b.toLowerCase();
+  if(['interactionrhythm','typetracker','叩舷','扣舷','交互节律'].indexOf(lower)>=0)return getLang()==='en'?'K':'扣';
+  var name=friendlyName(a)||b||'?';
+  return String(name).trim().slice(0,1).toUpperCase();
+}
 function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function tipAttr(s){return esc(s).replace(/\n/g,'&#10;')}
 function iconHtml(a){
@@ -581,7 +852,7 @@ function renderDayBars(days){
   var mx=Math.max(1,...days.map(function(d){return d.seconds||d.responses||0}));
   return '<div class="day-bars">'+days.map(function(d){
     var v=d.seconds||d.responses||0,height=v>0?Math.max(6,(v/mx)*100):2;
-    return '<div class="day-bar-wrap" title="'+esc(d.date)+' · '+(d.seconds!=null?fmtTime(v):fmtNum(v)+' 次')+'"><div class="day-bar" style="height:'+height.toFixed(1)+'%"></div><span>'+fmtDateShort(d.date)+'</span></div>';
+    return '<div class="day-bar-wrap" title="'+esc(d.date)+' · '+(d.seconds!=null?fmtTime(v):fmtNum(v)+' '+(getLang()==='en'?'responses':'次'))+'"><div class="day-bar" style="height:'+height.toFixed(1)+'%"></div><span>'+fmtDateShort(d.date)+'</span></div>';
   }).join('')+'</div>';
 }
 function renderDetailHeat(days){
@@ -605,45 +876,70 @@ async function downloadExport(format){
   setTimeout(function(){URL.revokeObjectURL(url)},500);
 }
 function openExport(){
-  showModal('导出数据',
-    '<p class="muted">导出最近 30 天的数据。JSON 适合继续交给节律助手或其他工具分析，CSV 适合放进表格里查看。</p>'+
+  showModal(getLang()==='en'?'Export Data':'导出数据',
+    '<p class="muted">'+(getLang()==='en'?'Export the last 30 days. JSON keeps the full structure; CSV opens well in spreadsheets.':'导出最近 30 天的数据。JSON 适合继续做手感回放或其他分析，CSV 适合放进表格里查看。')+'</p>'+
     '<div class="action-grid">'+
-      '<a class="action-card" href="#" onclick="downloadExport(&quot;json&quot;);return false"><b>JSON</b><span>保留完整记录结构，适合后续分析。</span></a>'+
-      '<a class="action-card" href="#" onclick="downloadExport(&quot;csv&quot;);return false"><b>CSV</b><span>普通表格文件，打开后就能筛选和排序。</span></a>'+
+      '<a class="action-card" href="#" onclick="downloadExport(&quot;json&quot;);return false"><b>JSON</b><span>'+(getLang()==='en'?'Full record structure for further analysis.':'保留完整记录结构，适合后续分析。')+'</span></a>'+
+      '<a class="action-card" href="#" onclick="downloadExport(&quot;csv&quot;);return false"><b>CSV</b><span>'+(getLang()==='en'?'Spreadsheet-friendly file for sorting and filtering.':'普通表格文件，打开后就能筛选和排序。')+'</span></a>'+
     '</div>'
   );
 }
-var SETTINGS_DEFAULTS={auto_start:false,background_start:false,silent_start:false,auto_update_check:true};
+var SETTINGS_DEFAULTS={auto_start:false,background_start:false,silent_start:false,auto_update_check:true,theme:'light',accent:'green',language:'zh',intro_seen:false};
 var SETTINGS_STATE=Object.assign({},SETTINGS_DEFAULTS);
 var settingsLoadPromise=null;
 var settingsLoaded=false;
+var ACCENT_META={
+  green:{color:'#2f8f59',labelKey:'green'},
+  rose:{color:'#e75d74',labelKey:'rose'},
+  indigo:{color:'#4f68d7',labelKey:'indigo'},
+  ink:{color:'#2f3437',labelKey:'ink'}
+};
 function settingsToggle(key){
   var on=!!SETTINGS_STATE[key];
-  return '<button class="switch '+(on?'on':'')+'" onclick="toggleSetting(&quot;'+key+'&quot;)" aria-label="'+(on?'关闭':'开启')+'"></button>';
+  return '<button class="switch '+(on?'on':'')+'" onclick="toggleSetting(&quot;'+key+'&quot;)" aria-label="'+(on?t('switchOff'):t('switchOn'))+'"></button>';
+}
+function languageChoices(){
+  var lang=getLang();
+  return '<div class="theme-segment">'+
+    '<button class="theme-choice '+(lang==='zh'?'active':'')+'" onclick="setLanguage(&quot;zh&quot;)">'+esc(t('chinese'))+'</button>'+
+    '<button class="theme-choice '+(lang==='en'?'active':'')+'" onclick="setLanguage(&quot;en&quot;)">'+esc(t('english'))+'</button>'+
+  '</div>';
+}
+function accentChoices(){
+  var active=getAccent();
+  return '<div class="accent-grid">'+Object.keys(ACCENT_META).map(function(key){
+    var item=ACCENT_META[key];
+    return '<button class="accent-choice '+(active===key?'active':'')+'" data-accent-choice="'+esc(key)+'" onclick="setAccentChoice(&quot;'+esc(key)+'&quot;)"><i style="--swatch:'+esc(item.color)+'"></i><span>'+esc(t(item.labelKey))+'</span></button>';
+  }).join('')+'</div>';
 }
 function renderSettings(settings){
   SETTINGS_STATE=Object.assign({},SETTINGS_DEFAULTS,settings||{});
   SETTINGS_STATE.silent_start=!!(SETTINGS_STATE.silent_start||SETTINGS_STATE.background_start);
-  showModal('设置',
+  var en=getLang()==='en';
+  showModal(en?'Settings':'设置',
     '<div class="settings-panel">'+
       '<div class="settings-section">'+
-        '<h3>启动方式</h3>'+
-        '<div class="setting-row"><div class="setting-copy"><b>开机自启</b><span>登录 Windows 后自动运行。</span></div>'+settingsToggle('auto_start')+'</div>'+
-        '<div class="setting-row"><div class="setting-copy"><b>静默启动</b><span>自启时只进托盘，不弹主窗口。</span></div>'+settingsToggle('silent_start')+'</div>'+
+        '<h3>'+(en?'Startup':'启动方式')+'</h3>'+
+        '<div class="setting-row"><div class="setting-copy"><b>'+(en?'Launch at login':'开机自启')+'</b><span>'+(en?'Start automatically after signing in to Windows.':'登录 Windows 后自动运行。')+'</span></div>'+settingsToggle('auto_start')+'</div>'+
+        '<div class="setting-row"><div class="setting-copy"><b>'+(en?'Silent start':'静默启动')+'</b><span>'+(en?'Start in tray without showing the window.':'自启时只进托盘，不弹主窗口。')+'</span></div>'+settingsToggle('silent_start')+'</div>'+
       '</div>'+
       '<div class="settings-section">'+
-        '<h3>数据与版本</h3>'+
-        '<div class="setting-row"><div class="setting-copy"><b>自动检查更新</b><span>启动后轻量检查，有新版时提醒。</span></div>'+settingsToggle('auto_update_check')+'</div>'+
+        '<h3>'+(en?'Data & Version':'数据与版本')+'</h3>'+
+        '<div class="setting-row"><div class="setting-copy"><b>'+(en?'Check updates':'自动检查更新')+'</b><span>'+(en?'Lightweight update check after startup.':'启动后轻量检查，有新版时提醒。')+'</span></div>'+settingsToggle('auto_update_check')+'</div>'+
         '<div class="settings-actions">'+
-          '<button class="settings-action" onclick="openExport()"><b>导出数据</b><span>最近 30 天记录。</span></button>'+
-          '<button class="settings-action" onclick="openUpdate()"><b>检查更新</b><span>发现新版后安装。</span></button>'+
+          '<button class="settings-action" onclick="openExport()"><b>'+(en?'Export':'导出数据')+'</b><span>'+(en?'Last 30 days.':'最近 30 天记录。')+'</span></button>'+
+          '<button class="settings-action" onclick="openUpdate()"><b>'+(en?'Updates':'检查更新')+'</b><span>'+(en?'Install when a new version appears.':'发现新版后安装。')+'</span></button>'+
         '</div>'+
       '</div>'+
       '<div class="settings-section">'+
-        '<h3>外观</h3>'+
+        '<h3>'+(en?'Appearance':'外观')+'</h3>'+
+        '<div class="setting-copy"><b>'+esc(t('language'))+'</b><span>'+(en?'Switch the whole interface language.':'切换整个界面的显示语言。')+'</span></div>'+
+        languageChoices()+
+        '<div class="setting-copy"><b>'+esc(t('accent'))+'</b><span>'+(en?'Classic green is the default.':'默认使用更传统的绿色。')+'</span></div>'+
+        accentChoices()+
         '<div class="theme-segment">'+
-          '<button class="theme-choice '+(getTheme()==='light'?'active':'')+'" data-theme-choice="light" onclick="setThemeChoice(&quot;light&quot;)">浅色</button>'+
-          '<button class="theme-choice '+(getTheme()==='dark'?'active':'')+'" data-theme-choice="dark" onclick="setThemeChoice(&quot;dark&quot;)">深色</button>'+
+          '<button class="theme-choice '+(getTheme()==='light'?'active':'')+'" data-theme-choice="light" onclick="setThemeChoice(&quot;light&quot;)">'+(en?'Light':'浅色')+'</button>'+
+          '<button class="theme-choice '+(getTheme()==='dark'?'active':'')+'" data-theme-choice="dark" onclick="setThemeChoice(&quot;dark&quot;)">'+(en?'Dark':'深色')+'</button>'+
         '</div>'+
       '</div>'+
     '</div>',
@@ -657,8 +953,19 @@ async function loadSettingsQuietly(updateModal){
     if(!d.ok)throw new Error(d.error||'设置读取失败');
     SETTINGS_STATE=Object.assign({},SETTINGS_DEFAULTS,d.settings||{});
     SETTINGS_STATE.silent_start=!!(SETTINGS_STATE.silent_start||SETTINGS_STATE.background_start);
+    if(d.settings&&d.settings.language&&d.settings.language!==getLang()){
+      localStorage.setItem('kx-lang',d.settings.language);
+      applyLanguage();
+    }
+    if(d.settings&&d.settings.theme&&d.settings.theme!==getTheme()){
+      localStorage.setItem('kx-theme',d.settings.theme);
+    }
+    if(d.settings&&d.settings.accent&&d.settings.accent!==getAccent()){
+      localStorage.setItem('kx-accent',d.settings.accent);
+    }
+    applyTheme(getTheme());
     settingsLoaded=true;
-    if(updateModal&&!document.getElementById('modal').hidden&&document.getElementById('modal-title').textContent==='设置'){
+    if(updateModal&&!document.getElementById('modal').hidden&&document.getElementById('modal-title').textContent===t('settings')){
       renderSettings(SETTINGS_STATE);
     }
     return SETTINGS_STATE;
@@ -672,7 +979,7 @@ async function openSettings(){
   try{
     await loadSettingsQuietly(true);
   }catch(e){
-    if(!settingsLoaded)showModal('设置','<div class="modal-error">'+esc(e.message||'设置读取失败')+'</div>');
+    if(!settingsLoaded)showModal(t('settings'),'<div class="modal-error">'+esc(e.message||t('settingsReadFailed'))+'</div>');
   }
 }
 async function toggleSetting(key){
@@ -686,16 +993,16 @@ async function toggleSetting(key){
       body:JSON.stringify(patch)
     });
     var d=await r.json();
-    if(!d.ok)throw new Error(d.error||'设置保存失败');
+    if(!d.ok)throw new Error(d.error||t('settingsSaveFailed'));
     renderSettings(d.settings||{});
   }catch(e){
-    showModal('设置','<div class="modal-error">'+esc(e.message||'设置保存失败')+'</div>');
+    showModal(t('settings'),'<div class="modal-error">'+esc(e.message||t('settingsSaveFailed'))+'</div>');
   }
 }
 var lastUpdateManifest=null;
 var startupUpdateChecked=false;
 function renderUpdateNotes(notes){
-  if(!notes||!notes.length)return '<p class="muted">这次更新没有额外说明。</p>';
+  if(!notes||!notes.length)return '<p class="muted">'+esc(t('noUpdateNotes'))+'</p>';
   return '<div class="insight-list">'+notes.map(function(x){
     return '<div class="insight-item">'+esc(x)+'</div>';
   }).join('')+'</div>';
@@ -704,8 +1011,8 @@ function showUpdateToast(m){
   lastUpdateManifest=m;
   var title=document.getElementById('update-toast-title');
   var sub=document.getElementById('update-toast-sub');
-  if(title)title.textContent='发现新版本 '+(m.latest||'');
-  if(sub)sub.textContent=(m.notes&&m.notes[0])?m.notes[0]:'可以稍后安装';
+  if(title)title.textContent=t('updateFound')+' '+(m.latest||'');
+  if(sub)sub.textContent=(m.notes&&m.notes[0])?m.notes[0]:t('canInstallLater');
   document.getElementById('update-toast').hidden=false;
 }
 function dismissUpdateToast(){
@@ -714,16 +1021,16 @@ function dismissUpdateToast(){
 function showUpdateAvailable(m,returnTo){
   lastUpdateManifest=m;
   var size=m.size?(' · '+(m.size/1024/1024).toFixed(1)+' MB'):'';
-  showModal('发现新版本',
+  showModal(t('updateFound'),
     '<div class="metric-grid">'+
-      '<div class="metric"><span>当前版本</span><b>'+esc(m.current||'—')+'</b></div>'+
-      '<div class="metric"><span>新版本</span><b>'+esc(m.latest||'—')+'</b></div>'+
+      '<div class="metric"><span>'+esc(t('currentVersion'))+'</span><b>'+esc(m.current||'—')+'</b></div>'+
+      '<div class="metric"><span>'+esc(t('newVersion'))+'</span><b>'+esc(m.latest||'—')+'</b></div>'+
     '</div>'+
-    '<p class="muted">新版已准备好。安装时应用会短暂关闭，完成后自动重新打开。'+esc(size)+'</p>'+
-    '<div class="detail-section"><h3>更新内容</h3>'+renderUpdateNotes(m.notes||[])+'</div>'+
+    '<p class="muted">'+esc(t('updateReady'))+esc(size)+'</p>'+
+    '<div class="detail-section"><h3>'+esc(t('updateContent'))+'</h3>'+renderUpdateNotes(m.notes||[])+'</div>'+
     '<div class="action-grid">'+
-      '<a class="action-card" href="#" onclick="installUpdate();return false"><b>下载并安装</b><span>安装过程中应用会短暂关闭。</span></a>'+
-      '<a class="action-card" href="#" onclick="closeModal();return false"><b>稍后再说</b><span>保留当前版本继续使用。</span></a>'+
+      '<a class="action-card" href="#" onclick="installUpdate();return false"><b>'+esc(t('downloadInstall'))+'</b><span>'+esc(t('installShort'))+'</span></a>'+
+      '<a class="action-card" href="#" onclick="closeModal();return false"><b>'+esc(t('notNow'))+'</b><span>'+esc(t('keepCurrent'))+'</span></a>'+
     '</div>',
     'update-modal',
     {returnTo:returnTo}
@@ -731,17 +1038,17 @@ function showUpdateAvailable(m,returnTo){
 }
 function showNoUpdate(m,checking,returnTo){
   var noUpdateText=m.update_configured===false
-    ? '当前版本还没有配置更新通道。'
-    : (checking?'正在后台确认版本，稍后会自动提醒。':'现在已经是最新版本。');
-  showModal('检查更新',
+    ? t('noUpdateChannel')
+    : (checking?t('checkingVersion'):t('alreadyLatest'));
+  showModal(t('checkUpdate'),
     '<div class="metric-grid">'+
-      '<div class="metric"><span>当前版本</span><b>'+esc(m.current||'—')+'</b></div>'+
-      '<div class="metric"><span>最新版本</span><b>'+esc(m.latest||'—')+'</b></div>'+
+      '<div class="metric"><span>'+esc(t('currentVersion'))+'</span><b>'+esc(m.current||'—')+'</b></div>'+
+      '<div class="metric"><span>'+esc(t('latestVersion'))+'</span><b>'+esc(m.latest||'—')+'</b></div>'+
     '</div>'+
     '<p class="muted">'+esc(noUpdateText)+'</p>'+
     '<div class="action-grid">'+
-      '<a class="action-card" href="#" onclick="forceUpdateCheck();return false"><b>重新检查</b><span>立即连接更新通道确认一次。</span></a>'+
-      '<a class="action-card" href="#" onclick="closeModal();return false"><b>返回设置</b><span>关闭这个面板。</span></a>'+
+      '<a class="action-card" href="#" onclick="forceUpdateCheck();return false"><b>'+esc(t('recheck'))+'</b><span>'+esc(t('recheckDesc'))+'</span></a>'+
+      '<a class="action-card" href="#" onclick="closeModal();return false"><b>'+esc(t('backSettings'))+'</b><span>'+esc(t('closePanel'))+'</span></a>'+
     '</div>',
     'update-modal',
     {returnTo:returnTo}
@@ -756,11 +1063,11 @@ function openPendingUpdate(){
   }
 }
 async function openUpdate(){
-  showModal('检查更新','<div class="modal-loading">正在读取更新状态…</div>','update-modal',{returnTo:'settings'});
+  showModal(t('checkUpdate'),'<div class="modal-loading">'+esc(t('readingUpdate'))+'</div>','update-modal',{returnTo:'settings'});
   try{
     var r=await fetch('/api/update/status');
     var d=await r.json();
-    if(!d.ok)throw new Error(d.error||'更新状态读取失败');
+    if(!d.ok)throw new Error(d.error||t('updateStatusFailed'));
     var m=d.manifest||{};
     lastUpdateManifest=m;
     if(!m.has_update){
@@ -769,21 +1076,21 @@ async function openUpdate(){
     }
     showUpdateAvailable(m,'settings');
   }catch(e){
-    showModal('检查更新','<div class="modal-error">'+esc(e.message||'更新检查失败')+'</div>','update-modal');
+    showModal(t('checkUpdate'),'<div class="modal-error">'+esc(e.message||t('updateCheckFailed'))+'</div>','update-modal');
   }
 }
 async function forceUpdateCheck(){
-  showModal('检查更新','<div class="modal-loading">正在连接更新通道…</div>','update-modal',{returnTo:'settings'});
+  showModal(t('checkUpdate'),'<div class="modal-loading">'+esc(t('connectingUpdate'))+'</div>','update-modal',{returnTo:'settings'});
   try{
     var r=await fetch('/api/update/check');
     var d=await r.json();
-    if(!d.ok)throw new Error(d.error||'更新检查失败');
+    if(!d.ok)throw new Error(d.error||t('updateCheckFailed'));
     var m=d.manifest||{};
     lastUpdateManifest=m;
     if(m.has_update)showUpdateAvailable(m,'settings');
     else showNoUpdate(m,false,'settings');
   }catch(e){
-    showModal('检查更新','<div class="modal-error">'+esc(e.message||'更新检查失败')+'</div>','update-modal',{returnTo:'settings'});
+    showModal(t('checkUpdate'),'<div class="modal-error">'+esc(e.message||t('updateCheckFailed'))+'</div>','update-modal',{returnTo:'settings'});
   }
 }
 async function checkUpdateSilently(){
@@ -811,7 +1118,7 @@ async function pollUpdateStatus(attempt){
 }
 async function installUpdate(){
   if(!lastUpdateManifest)return;
-  showModal('安装更新','<div class="modal-loading">正在准备下载和安装，应用稍后会自动关闭…</div>','update-modal',{returnTo:null});
+  showModal(t('installUpdate'),'<div class="modal-loading">'+esc(t('preparingInstall'))+'</div>','update-modal',{returnTo:null});
   try{
     var r=await fetch('/api/update/install',{
       method:'POST',
@@ -819,72 +1126,127 @@ async function installUpdate(){
       body:JSON.stringify({manifest:lastUpdateManifest})
     });
     var d=await r.json();
-    if(!d.ok)throw new Error(d.error||'更新安装失败');
-    showModal('安装更新','<div class="modal-loading">'+esc(d.message||'正在安装更新，应用稍后会自动重启')+'</div>','update-modal',{returnTo:null});
+    if(!d.ok)throw new Error(d.error||t('installFailed'));
+    showModal(t('installUpdate'),'<div class="modal-loading">'+esc(d.message||t('installingRestart'))+'</div>','update-modal',{returnTo:null});
   }catch(e){
-    showModal('安装更新','<div class="modal-error">'+esc(e.message||'更新安装失败')+'</div>','update-modal',{returnTo:null});
+    showModal(t('installUpdate'),'<div class="modal-error">'+esc(e.message||t('installFailed'))+'</div>','update-modal',{returnTo:null});
   }
 }
 function renderAppDetail(d){
   var peak=d.peak_hour===null||d.peak_hour===undefined?'—':fmtHour(d.peak_hour);
-  var density=d.response_density?Math.round(d.response_density)+'/分':'—';
-  var titles=d.top_titles&&d.top_titles.length?'<div class="detail-section"><h3>窗口标题</h3><div class="data-table">'+d.top_titles.map(function(t){
+  var density=d.response_density?Math.round(d.response_density)+t('perMin'):'—';
+  var titles=d.top_titles&&d.top_titles.length?'<div class="detail-section"><h3>'+esc(t('windowTitles'))+'</h3><div class="data-table">'+d.top_titles.map(function(t){
     return '<div class="data-row"><b>'+fmtTime(t.seconds)+'</b><em title="'+esc(t.title)+'">'+esc(t.title)+'</em></div>';
   }).join('')+'</div></div>':'';
   showModal(friendlyName(d.app),
-    '<div class="detail-top">'+detailIconHtml(d)+'<div><div class="detail-name">'+esc(friendlyName(d.app))+'</div><div class="detail-sub">'+esc(appSubName(d.app))+' · '+fmtDateShort(d.date_start)+' 至 '+fmtDateShort(d.date_end)+'</div></div></div>'+
+    '<div class="detail-top">'+detailIconHtml(d)+'<div><div class="detail-name">'+esc(friendlyName(d.app))+'</div><div class="detail-sub">'+esc(appSubName(d.app))+' · '+fmtDateShort(d.date_start)+' '+esc(t('to'))+' '+fmtDateShort(d.date_end)+'</div></div></div>'+
     '<div class="metric-grid">'+
-      '<div class="metric"><span>总时长</span><b>'+fmtTime(d.total_seconds)+'</b></div>'+
-      '<div class="metric"><span>今天</span><b>'+fmtTime(d.today_seconds)+'</b></div>'+
-      '<div class="metric"><span>次数</span><b>'+fmtNum(d.session_count)+'</b></div>'+
-      '<div class="metric"><span>高峰</span><b>'+peak+'</b></div>'+
-      '<div class="metric"><span>响应</span><b>'+fmtNum(d.responses||0)+'</b></div>'+
-      '<div class="metric"><span>键盘</span><b>'+fmtNum(d.keyboard||0)+'</b></div>'+
-      '<div class="metric"><span>鼠标</span><b>'+fmtNum(d.mouse||0)+'</b></div>'+
-      '<div class="metric"><span>密度</span><b>'+density+'</b></div>'+
+      '<div class="metric"><span>'+esc(t('totalTime'))+'</span><b>'+fmtTime(d.total_seconds)+'</b></div>'+
+      '<div class="metric"><span>'+esc(t('todayMetric'))+'</span><b>'+fmtTime(d.today_seconds)+'</b></div>'+
+      '<div class="metric"><span>'+esc(t('returns'))+'</span><b>'+fmtNum(d.session_count)+'</b></div>'+
+      '<div class="metric"><span>'+esc(t('peak'))+'</span><b>'+peak+'</b></div>'+
+      '<div class="metric"><span>'+esc(t('touchResponses'))+'</span><b>'+fmtNum(d.responses||0)+'</b></div>'+
+      '<div class="metric"><span>'+esc(t('keystrokesMetric'))+'</span><b>'+fmtNum(d.keyboard||0)+'</b></div>'+
+      '<div class="metric"><span>'+esc(t('mouseMetric'))+'</span><b>'+fmtNum(d.mouse||0)+'</b></div>'+
+      '<div class="metric"><span>'+esc(t('density'))+'</span><b>'+density+'</b></div>'+
     '</div>'+
-    '<div class="detail-section"><h3>应用热力图</h3>'+renderDetailHeat(d.heatmap||[])+'</div>'+
-    '<div class="detail-section"><h3>小时分布</h3>'+renderHourBars(d.hourly||[])+'</div>'+
-    '<div class="detail-section"><h3>每日时长</h3>'+renderDayBars(d.daily||[])+'</div>'+
+    '<div class="detail-section"><h3>'+esc(t('appTouchMap'))+'</h3>'+renderDetailHeat(d.heatmap||[])+'</div>'+
+    '<div class="detail-section"><h3>'+esc(t('hourlyDistribution'))+'</h3>'+renderHourBars(d.hourly||[])+'</div>'+
+    '<div class="detail-section"><h3>'+esc(t('dailyTime'))+'</h3>'+renderDayBars(d.daily||[])+'</div>'+
     titles
   );
 }
 async function openAppDetail(app){
-  showModal(friendlyName(app),'<div class="modal-loading">正在读取应用记录…</div>');
+  showModal(friendlyName(app),'<div class="modal-loading">'+esc(t('appRecordLoading'))+'</div>');
   try{
     var r=await fetch('/api/app-analysis?days=7&app='+encodeURIComponent(app));
     renderAppDetail(await r.json());
   }catch(e){
-    showModal(friendlyName(app),'<div class="modal-error">应用记录读取失败</div>');
+    showModal(friendlyName(app),'<div class="modal-error">'+esc(t('appRecordFailed'))+'</div>');
   }
 }
 function renderInsights(d){
   var findings=d.findings&&d.findings.length?d.findings:(d.judgments||[]);
-  var suggestions=d.suggestions&&d.suggestions.length?d.suggestions:['记录还不够多，先正常使用一段时间，再回来查看节律建议。'];
-  showModal('节律助手',
-    '<div class="insight-list"><div class="insight-item lead">'+esc(d.conclusion||'当前记录还不足以形成稳定结论。')+'</div></div>'+
-    '<div class="insight-section"><h3>重点发现</h3><div class="insight-list">'+(findings.length?findings.slice(0,3).map(function(x){return '<div class="insight-item">'+esc(x)+'</div>'}).join(''):'<div class="insight-item">记录还不够集中，暂时无法选出稳定线索。</div>')+'</div></div>'+
-    '<div class="insight-section"><h3>建议</h3><div class="insight-list">'+suggestions.slice(0,3).map(function(x){return '<div class="insight-item">'+esc(x)+'</div>'}).join('')+'</div></div>'+
-    '<div class="insight-foot">本地规则分析，不上传记录。只根据时长、响应次数和前台应用选择最值得看的线索。</div>',
+  var en=getLang()==='en';
+  var scope=d.scope||'week';
+  var findingHtml=findings.length?findings.slice(0,3).map(function(x){
+    return '<div class="insight-item clue"><span class="insight-badge"></span><span>'+esc(x)+'</span></div>';
+  }).join(''):'<div class="insight-item">'+(en?'Not enough concentrated records yet.':'记录还不够集中，暂时无法选出稳定线索。')+'</div>';
+  var actionHtml=scope==='day'
+    ? '<div class="action-grid insight-actions"><a class="action-card" href="#" onclick="openWeeklyInsights();return false"><b>'+esc(t('weekReplay'))+'</b><span>'+esc(t('weekReplayDesc'))+'</span></a></div>'
+    : '<div class="action-grid insight-actions"><a class="action-card" href="#" onclick="openMimoInsights();return false"><b>'+esc(t('dayReplay')+' · '+fmtDateLabel(selectedDate))+'</b><span>'+esc(t('dayReplayDesc'))+'</span></a></div>';
+  var foot=d.provider==='mimo'
+    ? (en?'Generated by MiMo from local aggregate activity data. No input contents or window text are included.':'由 MiMo 根据本机聚合活动数据生成，不包含输入内容或窗口正文。')
+    : (en?'Local rule-based analysis. No upload, no input contents. It only uses time, keyboard, mouse responses, and foreground apps.':'本地规则分析，不上传记录。不读取输入内容，只根据时长、键盘、鼠标和前台应用选择最值得看的线索。');
+  showModal(t('replay'),
+    '<div class="insight-list"><div class="insight-item lead">'+esc(d.conclusion||(en?'Not enough records yet.':'当前记录还不足以形成稳定结论。'))+'</div></div>'+
+    '<div class="insight-section"><h3>'+(en?'Touch clues':'手感线索')+'</h3><div class="insight-list">'+findingHtml+'</div></div>'+
+    actionHtml+
+    '<div class="insight-foot">'+esc(foot)+'</div>',
     'insight-modal',
     {returnTo:null}
   );
 }
-async function openInsights(){
-  showModal('节律助手','<div class="modal-loading">正在分析最近记录…</div>','insight-modal',{returnTo:null});
+function mimoAnalyzingHtml(){
+  return '<div class="analysis-panel" role="status" aria-live="polite">'+
+    '<div class="analysis-hero"><div class="analysis-orb">AI</div><div><b>'+esc(t('mimoAnalyzingTitle'))+'</b><span>'+esc(t('mimoAnalyzingLead'))+'</span></div></div>'+
+    '<div class="analysis-steps">'+
+      '<div class="analysis-step"><i></i><span>'+esc(t('mimoAnalyzingStep1'))+'</span></div>'+
+      '<div class="analysis-step"><i></i><span>'+esc(t('mimoAnalyzingStep2'))+'</span></div>'+
+      '<div class="analysis-step"><i></i><span>'+esc(t('mimoAnalyzingStep3'))+'</span></div>'+
+    '</div>'+
+    '<div class="analysis-bar"><span></span></div>'+
+  '</div>';
+}
+function waitMs(ms){return new Promise(function(resolve){setTimeout(resolve,ms)})}
+async function openMimoInsights(){
+  var started=Date.now();
+  showModal(t('mimoAnalyzingTitle'),mimoAnalyzingHtml(),'analysis-modal',{returnTo:null});
   try{
-    var r=await fetch('/api/insights?days=7');
+    var r=await fetch('/api/mimo-replay?date='+encodeURIComponent(selectedDate));
+    var d=await r.json();
+    if(!r.ok||d.ok===false)throw new Error(d.error||t('replayFailed'));
+    var remaining=650-(Date.now()-started);
+    if(remaining>0)await waitMs(remaining);
+    renderInsights(d);
+  }catch(e){
+    var msg=(e&&e.message)?e.message:t('replayFailed');
+    showModal(t('replay'),'<div class="modal-error">'+esc(t('replayFailed'))+'：'+esc(msg)+'</div>','insight-modal',{returnTo:null});
+  }
+}
+async function openInsights(){
+  showModal(t('replay'),'<div class="modal-loading">'+esc(t('dayReplayLoading'))+'</div>','insight-modal',{returnTo:null});
+  try{
+    var r=await fetch('/api/day-replay?date='+encodeURIComponent(selectedDate));
+    if(!r.ok)throw new Error('replay failed');
     renderInsights(await r.json());
   }catch(e){
-    showModal('节律助手','<div class="modal-error">分析失败</div>','insight-modal',{returnTo:null});
+    showModal(t('replay'),'<div class="modal-error">'+esc(t('replayFailed'))+'</div>','insight-modal',{returnTo:null});
+  }
+}
+async function openWeeklyInsights(){
+  showModal(t('replay'),'<div class="modal-loading">'+esc(t('weekReplayLoading'))+'</div>','insight-modal',{returnTo:null});
+  try{
+    var r=await fetch('/api/insights?days=7');
+    if(!r.ok)throw new Error('replay failed');
+    var d=await r.json();
+    d.scope=d.scope||'week';
+    renderInsights(d);
+  }catch(e){
+    showModal(t('replay'),'<div class="modal-error">'+esc(t('replayFailed'))+'</div>','insight-modal',{returnTo:null});
   }
 }
 
 /* ── Render stats ──────────────── */
 function render(d){
-  document.getElementById('v-keys').textContent=fmtNum(d.keystrokes);
-  document.getElementById('v-mouse').textContent=fmtNum(d.mouse_events||0);
+  var keyboard=d.keystrokes||0,mouse=d.mouse_events||0,responses=d.responses||keyboard+mouse;
+  document.getElementById('v-keys').textContent=fmtNum(keyboard);
+  document.getElementById('v-mouse').textContent=fmtNum(mouse);
   document.getElementById('v-time').textContent=fmtTime(d.total_seconds||0);
+  var dateEl=document.getElementById('today-date');
+  var scoreEl=document.getElementById('today-score');
+  if(dateEl)updateDateControls();
+  if(scoreEl)scoreEl.textContent=fmtNum(responses||0);
 }
 
 /* ── Heatmap (previous 5 days + today) ─ */
@@ -898,8 +1260,18 @@ function heatColor(v,mx){
   if(t<.82)return 'var(--heat-5)';
   return 'var(--heat-6)';
 }
-var WEEKDAYS=['周日','周一','周二','周三','周四','周五','周六'];
+var WEEKDAYS_ZH=['周日','周一','周二','周三','周四','周五','周六'];
+var WEEKDAYS_EN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 var heatmapDays=[];
+var heatRange='week';
+var monthHeatmap=null;
+
+function weekdayLabel(date){
+  var dt=new Date(date+'T00:00:00');
+  if(isNaN(dt.getTime()))return '';
+  var labels=getLang()==='en'?WEEKDAYS_EN:WEEKDAYS_ZH;
+  return labels[dt.getDay()]||'';
+}
 
 function selectedHeatValue(day,h){
   var includeKeyboard=document.getElementById('heat-keyboard')?.checked!==false;
@@ -908,16 +1280,31 @@ function selectedHeatValue(day,h){
   var m=(day.mouse_hourly&&day.mouse_hourly[h])||0;
   return (includeKeyboard?k:0)+(includeMouse?m:0);
 }
+function selectedDayValue(day){
+  var includeKeyboard=document.getElementById('heat-keyboard')?.checked!==false;
+  var includeMouse=document.getElementById('heat-mouse')?.checked!==false;
+  return (includeKeyboard?(day.keyboard||0):0)+(includeMouse?(day.mouse||0):0);
+}
+function setHeatRange(range){
+  heatRange=range==='month'?'month':'week';
+  document.getElementById('heat-week-btn')?.classList.toggle('active',heatRange==='week');
+  document.getElementById('heat-month-btn')?.classList.toggle('active',heatRange==='month');
+  if(heatRange==='month'&&!monthHeatmap)loadMonthHeatmap();
+  else renderHeatmap();
+}
 function renderHeatmap(){
   try{
+    if(heatRange==='month')return renderMonthHeatmap();
     var days=heatmapDays||[];
     var mx=1;
     for(var d=0;d<days.length;d++)for(var h=0;h<24;h++){var sv=selectedHeatValue(days[d],h);if(sv>mx)mx=sv;}
-    var grid=document.getElementById('heat-grid'),hourLbl=document.getElementById('heat-day-labels'),dayLbl=document.getElementById('heat-hours-labels');
+    var grid=document.getElementById('heat-grid'),hourLbl=document.getElementById('heat-day-labels'),dayLbl=document.getElementById('heat-hours-labels'),weekLbl=document.getElementById('heat-weekday-labels');
+    grid.classList.remove('month');
     var dayCount=Math.max(1,days.length||6);
     grid.style.setProperty('--heat-day-count',dayCount);
     dayLbl.style.setProperty('--heat-day-count',dayCount);
-    var now=new Date(),today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0'),nowHour=now.getHours();
+    if(weekLbl)weekLbl.style.setProperty('--heat-day-count',dayCount);
+    var now=new Date(),today=todayIso(),nowHour=now.getHours();
     var nowText=document.getElementById('heat-now-text');
     if(nowText)nowText.textContent=fmtHourRange(nowHour);
     hourLbl.innerHTML='';
@@ -925,6 +1312,9 @@ function renderHeatmap(){
       var dt=new Date(d.date+'T00:00:00');
       return '<span>'+(dt.getMonth()+1)+'/'+dt.getDate()+'</span>';
     }).join('');
+    if(weekLbl){
+      weekLbl.innerHTML=days.map(function(d){return '<span>'+esc(weekdayLabel(d.date))+'</span>';}).join('');
+    }
     var cells='';
     for(var c=0;c<days.length;c++){
       cells+='<div class="day-block">';
@@ -933,9 +1323,9 @@ function renderHeatmap(){
         var v=selectedHeatValue(days[c],h);
         var k=(days[c].keyboard_hourly&&days[c].keyboard_hourly[h])||0;
         var m=(days[c].mouse_hourly&&days[c].mouse_hourly[h])||0;
-        var label=fmtHourRange(h)+' · 键盘 '+fmtNum(k)+' · 鼠标 '+fmtNum(m);
+        var label=fmtHourRange(h)+' · '+t('keyboardShort')+' '+fmtNum(k)+' · '+t('mouseShort')+' '+fmtNum(m);
         var isNow=days[c].date===today&&h===nowHour;
-        cells+='<div class="hc'+(isNow?' now':'')+'" style="background:'+heatColor(v,mx)+'" data-tip="'+tipAttr(label)+'"></div>';
+        cells+='<div class="hc'+(isNow?' now':'')+'" style="background:'+heatColor(v,mx)+'" data-date="'+esc(days[c].date)+'" data-hour="'+h+'" data-tip="'+tipAttr(label)+'"></div>';
       }
       cells+='</div>';
     }
@@ -947,17 +1337,78 @@ function renderHeatmap(){
       cell.addEventListener('mouseleave',function(){
         if(nowText)nowText.textContent=fmtHourRange(nowHour);
       });
+      cell.addEventListener('click',function(){
+        openHourDetail(cell.dataset.date,Number(cell.dataset.hour||0));
+      });
     });
     // Legend color cells
     var lg=document.getElementById('heat-lg');
     if(lg){var is=lg.querySelectorAll('i');for(var i=0;i<is.length;i++){is[i].style.background=heatColor(i===0?0:(mx*(i+1)/5),mx);}}
   }catch(e){}
 }
+function renderMonthHeatmap(){
+  try{
+    var days=(monthHeatmap&&monthHeatmap.days)||[];
+    var grid=document.getElementById('heat-grid'),dayLbl=document.getElementById('heat-hours-labels'),weekLbl=document.getElementById('heat-weekday-labels'),nowText=document.getElementById('heat-now-text');
+    var mx=1;
+    days.forEach(function(d){var v=selectedDayValue(d);if(v>mx)mx=v;});
+    grid.classList.add('month');
+    grid.style.removeProperty('--heat-day-count');
+    dayLbl.innerHTML='';
+    if(weekLbl)weekLbl.innerHTML='';
+    if(nowText)nowText.textContent=monthHeatmap?monthHeatmap.month:'';
+    grid.innerHTML=days.map(function(d){
+      var label=fmtDateLabel(d.date)+' · '+t('keyboardShort')+' '+fmtNum(d.keyboard||0)+' · '+t('mouseShort')+' '+fmtNum(d.mouse||0);
+      return '<div class="month-cell" style="background:'+heatColor(selectedDayValue(d),mx)+'" data-tip="'+tipAttr(label)+'" title="'+esc(label)+'"></div>';
+    }).join('');
+    grid.querySelectorAll('.month-cell[data-tip]').forEach(function(cell){
+      cell.addEventListener('mouseenter',function(){if(nowText)nowText.textContent=cell.dataset.tip||''});
+      cell.addEventListener('mouseleave',function(){if(nowText)nowText.textContent=monthHeatmap?monthHeatmap.month:''});
+    });
+    var lg=document.getElementById('heat-lg');
+    if(lg){var is=lg.querySelectorAll('i');for(var i=0;i<is.length;i++){is[i].style.background=heatColor(i===0?0:(mx*(i+1)/5),mx);}}
+  }catch(e){}
+}
+async function openHourDetail(date,hour){
+  showModal(t('hourDetail'),'<div class="modal-loading">'+esc(t('readingStrength'))+'</div>');
+  try{
+    var r=await fetch('/api/hour-detail?date='+encodeURIComponent(date)+'&hour='+encodeURIComponent(hour));
+    var d=await r.json();
+    var keyUnit=getLang()==='en'?' keys':'键';
+    var mouseUnit=getLang()==='en'?' mouse':'鼠';
+    var apps=d.apps&&d.apps.length?d.apps.map(function(a){
+      var share=a.share?Math.round(a.share*100):0;
+      return '<div class="data-row"><b>'+fmtNum(a.responses||0)+'</b><em>'+esc(friendlyName(a.app))+' · '+fmtNum(a.keyboard||0)+keyUnit+' / '+fmtNum(a.mouse||0)+mouseUnit+' · '+share+'%</em></div>';
+    }).join(''):'<div class="empty">'+esc(t('noHourApps'))+'</div>';
+    showModal(
+      t('hourDetail'),
+      '<div class="detail-top"><div><div class="detail-name">'+esc(fmtDateLabel(d.date)+' '+fmtHourRange(d.hour))+'</div><div class="detail-sub">'+esc(t('keyboardShort'))+' '+fmtNum(d.keyboard||0)+' · '+esc(t('mouseShort'))+' '+fmtNum(d.mouse||0)+'</div></div></div>'+
+      '<div class="metric-grid">'+
+        '<div class="metric"><span>'+esc(t('touchResponses'))+'</span><b>'+fmtNum(d.responses||0)+'</b></div>'+
+        '<div class="metric"><span>'+esc(t('keystrokesMetric'))+'</span><b>'+fmtNum(d.keyboard||0)+'</b></div>'+
+        '<div class="metric"><span>'+esc(t('mouseMetric'))+'</span><b>'+fmtNum(d.mouse||0)+'</b></div>'+
+        '<div class="metric"><span>'+esc(t('hourApps'))+'</span><b>'+fmtNum((d.apps||[]).length)+'</b></div>'+
+      '</div>'+
+      '<div class="detail-section"><h3>'+esc(t('hourApps'))+'</h3><div class="data-table">'+apps+'</div></div>'
+    );
+  }catch(e){
+    showModal(t('hourDetail'),'<div class="modal-error">'+esc(t('appRecordFailed'))+'</div>');
+  }
+}
 async function loadHeatmap(){
   try{
-    var r=await fetch('/api/heatmap?days=6'),j=await r.json();
+    var r=await fetch('/api/heatmap?days=6&end='+encodeURIComponent(selectedDate)),j=await r.json();
     heatmapDays=j.data||[];
+    document.getElementById('heat-grid')?.classList.remove('month');
     renderHeatmap();
+  }catch(e){}
+}
+async function loadMonthHeatmap(){
+  try{
+    var month=selectedDate.slice(0,7);
+    var r=await fetch('/api/month-heatmap?month='+encodeURIComponent(month)),j=await r.json();
+    monthHeatmap=j;
+    renderMonthHeatmap();
   }catch(e){}
 }
 
@@ -966,15 +1417,18 @@ var lastAppsLayoutSignature='';
 function renderApps(apps){
   try{
     apps=apps||[];
-    if(!apps.length){document.getElementById('app-list').innerHTML='<div class="empty">暂无数据</div>';document.getElementById('app-count').textContent='';return;}
-    var mx=apps[0].seconds,total=apps.reduce(function(a,b){return a+b.seconds},0);
+    if(!apps.length){document.getElementById('app-list').innerHTML='<div class="empty">'+t('noData')+'</div>';document.getElementById('app-count').textContent='';return;}
+    var maxResponses=apps.reduce(function(a,b){return Math.max(a,b.responses||0)},0);
+    var maxSeconds=apps.reduce(function(a,b){return Math.max(a,b.seconds||0)},0);
+    var totalResponses=apps.reduce(function(a,b){return a+(b.responses||0)},0);
+    var totalSeconds=apps.reduce(function(a,b){return a+(b.seconds||0)},0);
     var topApps=apps.slice(0,10);
     var signature=topApps.map(function(a){return [a.app,a.path||''].join('|')}).join('||');
     document.getElementById('app-count').textContent='';
     if(signature!==lastAppsLayoutSignature){
       lastAppsLayoutSignature=signature;
       document.getElementById('app-list').innerHTML=topApps.map(function(a,i){
-        return '<div class="app-row" data-app="'+esc(encodeURIComponent(a.app))+'"><div class="app-rank '+(RANKS[i]||'rx')+'">'+(i+1)+'</div>'+iconHtml(a)+'<div class="app-name" title="'+esc(friendlyName(a.app))+'">'+esc(friendlyName(a.app))+'</div><div class="app-track"><div class="app-fill '+FILLS[i%FILLS.length]+'"></div></div><div class="app-pct"></div><div class="app-time"></div></div>';
+        return '<div class="app-row" data-app="'+esc(encodeURIComponent(a.app))+'"><div class="app-rank '+(RANKS[i]||'rx')+'">'+(i+1)+'</div>'+iconHtml(a)+'<div class="app-name" title="'+esc(friendlyName(a.app))+'">'+esc(friendlyName(a.app))+'</div><div class="app-meta"></div><div class="app-track"><div class="app-fill '+FILLS[i%FILLS.length]+'"></div></div></div>';
       }).join('');
       document.querySelectorAll('.app-row[data-app]').forEach(function(row){
         row.addEventListener('click',function(){openAppDetail(decodeURIComponent(row.dataset.app))});
@@ -984,17 +1438,20 @@ function renderApps(apps){
     topApps.forEach(function(a,i){
       var row=rows[i];
       if(!row)return;
-      var pct=mx>0?(a.seconds/mx*100):0,share=total>0?(a.seconds/total*100):0;
-      var fill=row.querySelector('.app-fill'),pctEl=row.querySelector('.app-pct'),timeEl=row.querySelector('.app-time');
+      var responses=a.responses||0,seconds=a.seconds||0;
+      var pct=maxResponses>0?(responses/maxResponses*100):(maxSeconds>0?(seconds/maxSeconds*100):0);
+      var durationShare=totalSeconds>0?(seconds/totalSeconds*100):0;
+      var fill=row.querySelector('.app-fill'),meta=row.querySelector('.app-meta');
       if(fill)fill.style.width=pct.toFixed(1)+'%';
-      if(pctEl)pctEl.textContent=share.toFixed(0)+'%';
-      if(timeEl)timeEl.textContent=fmtTime(a.seconds);
+      if(meta){
+        meta.textContent=fmtTime(seconds)+' · '+durationShare.toFixed(0)+'%';
+      }
     });
   }catch(e){}
 }
 async function loadApps(){
   try{
-    var r=await fetch('/api/apps'),j=await r.json();
+    var r=await fetch('/api/apps?date='+encodeURIComponent(selectedDate)),j=await r.json();
     renderApps(j.apps||[]);
   }catch(e){}
 }
@@ -1033,39 +1490,61 @@ document.querySelector('.wrap')?.addEventListener('touchend', async () => {
 }, { passive: true });
 
 /* ── 数据加载 ─────────────────── */
+async function fetchJson(url){
+  var r=await fetch(url);
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return r.json();
+}
 async function loadData() {
-  try {
-    setOfflineMessage(false);
-    var todayReq = fetch('/api/today').then(function(r){return r.json()});
-    var heatReq = fetch('/api/heatmap?days=6').then(function(r){return r.json()});
-    var appsReq = fetch('/api/apps').then(function(r){return r.json()});
-    var results = await Promise.all([todayReq, heatReq, appsReq]);
-    render(results[0]);
-    heatmapDays = results[1].data || [];
+  setOfflineMessage(false);
+  updateDateControls();
+  var urls=[
+    '/api/day?date='+encodeURIComponent(selectedDate),
+    '/api/heatmap?days=6&end='+encodeURIComponent(selectedDate),
+    '/api/apps?date='+encodeURIComponent(selectedDate)
+  ];
+  var results=await Promise.allSettled(urls.map(fetchJson));
+  var ok=false;
+  if(results[0].status==='fulfilled'){
+    render(results[0].value);
+    ok=true;
+  }
+  if(results[1].status==='fulfilled'){
+    heatmapDays=results[1].value.data||[];
     renderHeatmap();
-    var appList = results[2].apps || [];
-    renderApps(appList);
-  } catch(e) {
-    console.error('数据加载失败:', e);
-    setOfflineMessage(true,'正在连接交互节律后台…');
+    ok=true;
+  }
+  if(results[2].status==='fulfilled'){
+    renderApps(results[2].value.apps||[]);
+    ok=true;
+  }
+  if(!ok){
+    setOfflineMessage(true,t('connecting'));
     if(!dataRetryTimer){
       dataRetryTimer=setTimeout(function(){
         dataRetryTimer=null;
         loadData();
       },1200);
     }
+  }else if(dataRetryTimer){
+    clearTimeout(dataRetryTimer);
+    dataRetryTimer=null;
   }
 }
 
 /* ── Init ──────────────────────── */
 async function init(){
   try{
+    document.getElementById('date-prev')?.addEventListener('click',function(){changeDate(-1)});
+    document.getElementById('date-next')?.addEventListener('click',function(){changeDate(1)});
+    updateDateControls();
     await loadData();
+    maybeShowIntro();
     setTimeout(checkUpdateSilently, 2500);
 
     // 定时刷新（降低频率以节省电量）
     setInterval(async function(){
-      if(document.hidden)return;
+      if(document.hidden||!isSelectedToday())return;
       try{
         var r=await fetch('/api/today');
         render(await r.json());
@@ -1074,13 +1553,56 @@ async function init(){
     
     setInterval(function(){
       if(document.hidden)return;
-      loadHeatmap();
-      loadApps();
+      if(isSelectedToday()){
+        loadHeatmap();
+        loadApps();
+      }
     }, 15000);
     
   }catch(e){
-    setOfflineMessage(true,'正在连接交互节律后台…');
+    setOfflineMessage(true,t('connecting'));
   }
+}
+
+function introHtml(){
+  return '<div class="intro-title">'+esc(t('introTitle'))+'</div>'+
+    '<p class="intro-copy">'+esc(t('introBody'))+'</p>'+
+    '<div class="intro-points">'+
+      '<div class="intro-point">'+esc(t('intro1'))+'</div>'+
+      '<div class="intro-point">'+esc(t('intro2'))+'</div>'+
+      '<div class="intro-point">'+esc(t('intro3'))+'</div>'+
+    '</div>'+
+    '<div class="action-grid">'+
+      '<a class="action-card" href="#" onclick="markIntroSeen();closeModal();return false"><b>'+esc(t('start'))+'</b><span>'+esc(t('subtitle'))+'</span></a>'+
+      '<a class="action-card" href="#" onclick="toggleLang();document.getElementById(&quot;modal-title&quot;).textContent=t(&quot;introTitle&quot;);document.getElementById(&quot;modal-body&quot;).innerHTML=introHtml();return false"><b>'+esc(t('langToggle'))+'</b><span>中文 / English</span></a>'+
+    '</div>';
+}
+function markIntroSeen(){
+  var key='kx-intro-v1.8.0';
+  localStorage.setItem(key,'1');
+  SETTINGS_STATE.intro_seen=true;
+  savePreferencePatch({intro_seen:true});
+}
+async function maybeShowIntro(){
+  var key='kx-intro-v1.8.0';
+  var hasLocalIntro=localStorage.getItem(key)==='1';
+  try{
+    await loadSettingsQuietly(false);
+  }catch(e){}
+  if(SETTINGS_STATE.intro_seen){
+    if(!hasLocalIntro)localStorage.setItem(key,'1');
+    return;
+  }
+  if(hasLocalIntro){
+    SETTINGS_STATE.intro_seen=true;
+    savePreferencePatch({intro_seen:true});
+    return;
+  }
+  if(localStorage.getItem(key)==='1')return;
+  localStorage.setItem(key,'1');
+  SETTINGS_STATE.intro_seen=true;
+  savePreferencePatch({intro_seen:true});
+  showModal(t('introTitle'),introHtml(),'intro-modal',{returnTo:null});
 }
 
 // 页面可见性变化时刷新数据
