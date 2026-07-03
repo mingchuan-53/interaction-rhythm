@@ -2,6 +2,15 @@
 
 这个日志记录叩舷从 Type Tracker、交互节律到当前版本的主要产品变化。它不是逐条提交记录，而是按用户体验和技术方向整理的开发脉络。
 
+## 1.9.8
+
+定位：本地 AI 稳定性追补版。让默认 Gemma 路径在 Ollama 未启动时也能自动恢复。
+
+- AI 回放调用本地 Ollama 前会先检测服务状态，未运行时自动从常见安装路径启动 `ollama serve`。
+- 新增 `KOUXIAN_OLLAMA_EXE` 环境变量，可指定自定义 Ollama 可执行文件位置。
+- 本地 Ollama 启动失败但配置了 DeepSeek / OpenAI 兼容 Key 时，会自动转云端兜底。
+- GitHub 发布辅助新增 `scripts/gh_with_git_credential.ps1`，在 `gh auth login` 网络不稳时可复用 Git Credential Manager 的凭据。
+
 ## 1.9.7
 
 定位：AI 默认可用版。让手感回放不再依赖用户进入界面配置模型或 Key。

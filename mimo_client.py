@@ -2,8 +2,12 @@
 import json
 import os
 import re
+import shutil
 import statistics
+import subprocess
+import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta
 
@@ -14,6 +18,11 @@ DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
 DEFAULT_OLLAMA_MODEL = "gemma4:12b"
 DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
 DEFAULT_DEEPSEEK_MODEL = "deepseek-chat"
+COMMON_OLLAMA_PATHS = (
+    r"C:\Ansel_Work\80_Runtime_Data\ollama\bin\ollama.exe",
+    r"C:\Program Files\Ollama\ollama.exe",
+    r"C:\Program Files (x86)\Ollama\ollama.exe",
+)
 
 # ── 文本净化 ──────────────────────────────────────────────
 TEXT_REPLACEMENTS = (
@@ -482,10 +491,56 @@ def _ollama_available(base_url: str) -> bool:
         return False
 
 
+def _ollama_exe() -> str:
+    configured = os.getenv("KOUXIAN_OLLAMA_EXE", "").strip()
+    if configured and os.path.isfile(configured):
+        return configured
+    found = shutil.which("ollama")
+    if found:
+        return found
+    for path in COMMON_OLLAMA_PATHS:
+        if os.path.isfile(path):
+            return path
+    return ""
+
+
+def _start_ollama_if_local(base_url: str) -> bool:
+    parsed = urllib.parse.urlparse(base_url)
+    host = (parsed.hostname or "").lower()
+    if host not in {"127.0.0.1", "localhost", "::1"}:
+        return False
+    exe = _ollama_exe()
+    if not exe:
+        return False
+    try:
+        subprocess.Popen(
+            [exe, "serve"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except Exception:
+        return False
+    for _ in range(18):
+        time.sleep(0.5)
+        if _ollama_available(base_url):
+            return True
+    return False
+
+
+def _ensure_ollama(base_url: str) -> None:
+    if _ollama_available(base_url):
+        return
+    if _start_ollama_if_local(base_url):
+        return
+    raise RuntimeError("Ollama 未运行，且无法自动启动本机 Ollama 服务。")
+
+
 def _call_ollama(messages: list[dict], model: str | None = None, base_url: str | None = None) -> str:
     base = (base_url or os.getenv("OLLAMA_HOST") or os.getenv("KOUXIAN_OLLAMA_BASE_URL") or DEFAULT_OLLAMA_BASE_URL).strip().rstrip("/")
     model = (model or os.getenv("KOUXIAN_OLLAMA_MODEL") or os.getenv("KOUXIAN_AI_MODEL") or DEFAULT_OLLAMA_MODEL).strip()
     timeout = int(_env_first("KOUXIAN_AI_TIMEOUT", "OLLAMA_TIMEOUT") or "90")
+    _ensure_ollama(base)
     payload = {
         "model": model,
         "messages": messages,
@@ -579,7 +634,7 @@ def _select_ai_provider() -> tuple[str, str, str]:
         return "mimo", os.getenv("MIMO_BASE_URL", DEFAULT_BASE_URL), os.getenv("MIMO_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
     if requested in {"openai", "compatible"}:
         return "openai", os.getenv("KOUXIAN_AI_BASE_URL", "").strip(), os.getenv("KOUXIAN_AI_MODEL", "").strip()
-    if _ollama_available(ollama_base):
+    if _ollama_available(ollama_base) or _ollama_exe():
         return "ollama", ollama_base, os.getenv("KOUXIAN_OLLAMA_MODEL", "").strip() or os.getenv("KOUXIAN_AI_MODEL", "").strip() or DEFAULT_OLLAMA_MODEL
     if _env_first("KOUXIAN_AI_API_KEY", "DEEPSEEK_API_KEY"):
         return "deepseek", os.getenv("DEEPSEEK_BASE_URL", DEFAULT_DEEPSEEK_BASE_URL), os.getenv("DEEPSEEK_MODEL", "").strip() or os.getenv("KOUXIAN_AI_MODEL", "").strip() or DEFAULT_DEEPSEEK_MODEL
@@ -591,7 +646,20 @@ def _select_ai_provider() -> tuple[str, str, str]:
 def _call_ai(messages: list[dict]) -> tuple[str, str, str]:
     provider, base_url, model = _select_ai_provider()
     if provider == "ollama":
-        return _call_ollama(messages, model=model, base_url=base_url), provider, model
+        try:
+            return _call_ollama(messages, model=model, base_url=base_url), provider, model
+        except Exception:
+            if _env_first("KOUXIAN_AI_API_KEY", "DEEPSEEK_API_KEY"):
+                api_key = _env_first("KOUXIAN_AI_API_KEY", "DEEPSEEK_API_KEY")
+                cloud_model = os.getenv("DEEPSEEK_MODEL", "").strip() or os.getenv("KOUXIAN_AI_MODEL", "").strip() or DEFAULT_DEEPSEEK_MODEL
+                return _call_openai_compatible(
+                    messages,
+                    "deepseek",
+                    api_key,
+                    os.getenv("DEEPSEEK_BASE_URL", DEFAULT_DEEPSEEK_BASE_URL),
+                    cloud_model,
+                ), "deepseek", cloud_model
+            raise
     if provider == "deepseek":
         api_key = _env_first("KOUXIAN_AI_API_KEY", "DEEPSEEK_API_KEY")
         if not api_key:

@@ -58,7 +58,7 @@ Windows 本地桌面工具 · 键盘响应 · 鼠标响应 · 应用强度榜 ·
 
 ### 用手感回放做轻量观察
 
-- 点击 AI 图标后自动生成当天手感回放：优先使用本机 Ollama/Gemma，也可用 `KOUXIAN_AI_API_KEY` 或 `DEEPSEEK_API_KEY` 走云端 OpenAI 兼容接口。
+- 点击 AI 图标后自动生成当天手感回放：优先使用本机 Ollama/Gemma；如果 Ollama 未运行，会尝试自动启动本机服务。也可用 `KOUXIAN_AI_API_KEY` 或 `DEEPSEEK_API_KEY` 走云端 OpenAI 兼容接口。
 - 云端模式只发送聚合统计，不发送输入内容、窗口正文、截图或鼠标坐标。
 - 不做人格判断，不给效率打分，不假装知道你的真实意图。
 

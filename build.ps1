@@ -251,9 +251,9 @@ $manifest = [ordered]@{
   size = $shareZipSize
   published_at = $publishedAt
   notes = @(
-    'AI 回放默认优先调用本机 Ollama/Gemma，不需要进入界面配置即可分析。',
-    '支持通过环境变量接入 DeepSeek 或其他 OpenAI 兼容服务，云端模式只发送聚合统计。',
-    'AI 弹窗改为通用文案，并展示实际模型的隐私说明。'
+    'AI 回放调用本机 Gemma 前会自动检测 Ollama，未运行时尝试拉起本机服务。',
+    '新增 KOUXIAN_OLLAMA_EXE 环境变量，可指定自定义 Ollama 可执行文件位置。',
+    '本地 Ollama 启动失败但配置了云端 Key 时，会自动转 DeepSeek 或 OpenAI 兼容服务兜底。'
   )
 }
 $manifestJson = ($manifest | ConvertTo-Json -Depth 5) + [Environment]::NewLine
