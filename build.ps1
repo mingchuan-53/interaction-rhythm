@@ -239,7 +239,9 @@ $manifest = [ordered]@{
     '媒体素材入口可按选中日期生成 Markdown 快照草稿，便于后续制作图文和短视频内容。'
   )
 }
-$manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $ManifestPath -Encoding UTF8
+$manifestJson = ($manifest | ConvertTo-Json -Depth 5) + [Environment]::NewLine
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($ManifestPath, $manifestJson, $utf8NoBom)
 
 Write-Host "  发布包预检..." -ForegroundColor Yellow
 $PreflightReport = Join-Path $ReleaseRoot "preflight-v$Version.json"
