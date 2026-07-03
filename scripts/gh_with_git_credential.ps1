@@ -14,11 +14,17 @@ if (-not (Test-Path -LiteralPath $GhPath)) {
   $GhPath = $command.Source
 }
 
-$credential = "protocol=https`nhost=github.com`n`n" | git credential fill
-$tokenLine = $credential | Where-Object { $_ -like "password=*" } | Select-Object -First 1
-$token = $tokenLine -replace "^password=", ""
-if ([string]::IsNullOrWhiteSpace($token)) {
-  throw "No GitHub token available from Git Credential Manager. Run git push or gh auth login first."
+$credPath = Join-Path $env:TEMP ("gh-git-credential-" + [System.Guid]::NewGuid().ToString("N") + ".txt")
+try {
+  [System.IO.File]::WriteAllText($credPath, "protocol=https`nhost=github.com`n`n", [System.Text.Encoding]::ASCII)
+  $credential = cmd /c "git credential fill < `"$credPath`""
+  $tokenLine = $credential | Where-Object { $_ -like "password=*" } | Select-Object -First 1
+  $token = $tokenLine -replace "^password=", ""
+  if ([string]::IsNullOrWhiteSpace($token)) {
+    throw "No GitHub token available from Git Credential Manager. Run git push or gh auth login first."
+  }
+} finally {
+  Remove-Item -LiteralPath $credPath -Force -ErrorAction SilentlyContinue
 }
 
 $env:GH_TOKEN = $token
